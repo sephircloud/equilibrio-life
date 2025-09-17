@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Equilibrio Life</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#2563eb">
+  <style>
+  :root{ --bg:#f6f8fb; --card:#ffffff; --ink:#111827; --muted:#6b7280; --accent:#2563eb; --surface:#f3f4f6; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444; --radius:16px; }
+  .dark{ --bg:#0b1220; --card:#121a2b; --ink:#e5e7eb; --muted:#9ca3af; --accent:#4f8cff; --surface:#0f172a; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; }
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:500 16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  *{box-sizing:border-box}
+  .wrap{max-width:960px;margin:8px auto 24px;padding:0 12px}
+  .appbar{position:sticky;top:0;z-index:10;background:var(--bg);display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 4px 8px 4px;backdrop-filter:saturate(140%) blur(6px)}
+  h1{font:800 20px/1.1 system-ui;margin:0}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{border:none;background:#e7eefc;color:#1e3a8a;padding:10px 14px;border-radius:999px;cursor:pointer}
+  .dark .pill{background:#1e293b;color:#cbd5e1}
+  .tabs{display:flex;gap:8px;flex-wrap:nowrap;overflow:auto}
+  .tab{border:none;background:#1f2937;color:#cbd5e1;padding:12px 16px;border-radius:12px;cursor:pointer;flex:0 0 auto}
+  .tab.active{background:var(--accent);color:#fff}
+  .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 6px 24px rgba(0,0,0,.08);margin-top:12px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:720px){.row{grid-template-columns:1fr}}
+  label{display:flex;flex-direction:column;justify-content:flex-start;color:var(--muted);font-size:14px}
+  input,select,textarea{width:100%;max-width:100%;padding:14px 12px;border-radius:12px;border:1px solid #d1d5db;background:#fff;color:#111827;margin-top:6px;font-size:16px}
+  .dark input,.dark select,.dark textarea{background:#0b1220;border-color:#26324a;color:#e5e7eb}
+  .btn{border:none;background:var(--accent);color:#fff;padding:14px 16px;border-radius:12px;cursor:pointer;font-weight:700}
+  .btn.secondary{background:#334155}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid #334155}
+  .kpi{background:var(--surface);border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:12px;margin-top:8px}
+  .kpi strong{float:right}
+  .hint{color:var(--muted);font-size:12px;margin-top:4px}
+  .badge{margin-left:8px;font-size:12px;color:var(--muted)}
+  canvas{max-width:100%;margin-top:12px}
+  .bottomnav{position:sticky;bottom:0;left:0;right:0;background:var(--bg);display:flex;gap:8px;justify-content:space-between;padding:10px 6px}
+  .bottomnav .tab{flex:1;text-align:center}
+  .profile-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .profile-bar select{min-width:160px}
+  /* Accordéon Outils */
+  details{background:var(--card);border-radius:12px;padding:10px;border:1px solid rgba(0,0,0,.06);}
+  summary{cursor:pointer;font-weight:700;color:var(--ink)}
+  /* Toasts */
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#111827;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast.ok{background:var(--ok)}.toast.warn{background:var(--warn)}.toast.danger{background:var(--danger)}
+  /* Badge objectif (option 2, sous-titre) */
+  #progressObj{display:block;margin-top:4px;font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+<div class="wrap" id="appRoot">
+  <div class="appbar">
+    <h1>Equilibrio Life</h1>
+    <div class="toolbar">
+      <div class="profile-bar">
+        <select id="profileSelect"></select>
+        <button class="pill" id="btnNewProfile" title="Nouveau profil">+ Profil</button>
+        <button class="pill" id="btnDupProfile" title="Dupliquer le profil">⎘ Dupliquer</button>
+        <button class="pill" id="btnRenameProfile" title="Renommer le profil">✏️ Renommer</button>
+        <button class="pill" id="btnSaveProfile" title="Sauver ce profil">💾 Sauver</button>
+        <button class="pill" id="btnExportProfiles" title="Exporter tous les profils">⤓ Export</button>
+        <button class="pill" id="btnImportProfiles" title="Importer profils (JSON)">⤒ Import</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+        <button class="pill" id="btnDeleteProfile" title="Supprimer ce profil">🗑️ Suppr.</button>
+      </div>
+      <button class="pill" id="toggleTheme">🌙</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="topTabs">
+    <button id="tabSalaire" class="tab active">Salaire</button>
+    <button id="tabConge" class="tab">Congés</button>
+    <button id="tabEpargne" class="tab">Épargne</button>
+    <button id="tabOutils" class="tab">Outils</button>
+  </div>
+
+  <section id="viewSalaire" class="card">
+    <h2>Salaire & Impôts</h2>
+    <div class="row">
+      <label>Brut mensuel (€)
+        <input id="brut" type="number" inputmode="decimal" step="0.01" placeholder="3000">
+        <div class="hint">Montant sur le contrat (avant déductions)</div>
+      </label>
+      <label>Charges salarié (%)
+        <input id="charges" type="number" inputmode="decimal" step="0.01" value="23">
+        <div class="hint">≈ 22–25% selon statut (cadre/non-cadre)</div>
+      </label>
+      <label>Taux PAS (%)
+        <input id="pas" type="number" inputmode="decimal" step="0.01" value="0">
+        <div class="hint">Taux personnalisé/neutre (impots.gouv)</div>
+      </label>
+      <div class="spacer"></div>
+      <button class="btn" id="btnCalcSalaire">Calculer</button>
+    </div>
+
+    <div class="row">
+      <div class="kpi">Net avant impôt : <strong id="netAvant">—</strong></div>
+      <div class="kpi">Net imposable (estim.) : <strong id="netImposable">—</strong></div>
+      <div class="kpi">PAS estimé : <strong id="montantPAS">—</strong></div>
+      <div class="kpi">Net après impôt : <strong id="netApres">—</strong></div>
+    </div>
+
+    <h3>Simulation prime</h3>
+    <div class="row">
+      <label>Prime brute (€)
+        <input id="prime" type="number" inputmode="decimal" step="0.01" placeholder="1000">
+        <div class="hint">Net estimé selon charges et PAS</div>
+      </label>
+      <div class="spacer"></div>
+      <button class="btn secondary" id="btnCalcPrime">Simuler</button>
+      <div class="kpi">Prime nette estimée : <strong id="primeNet">—</strong></div>
+    </div>
+
+    <h3>Comparateur 12 vs 13 mois</h3>
+    <div class="row">
+      <div class="kpi">12 mois : <strong id="sal12">—</strong></div>
+      <div class="kpi">13 mois : <strong id="sal13">—</strong></div>
+    </div>
+
+    <h3>Charges fixes & reste à vivre</h3>
+    <div class="row">
+      <label>Loyer (€)<input id="loyer" type="number" inputmode="decimal" step="0.01" value="0"></label>
+      <label>Énergie (€)<input id="energie" type="number" inputmode="decimal" step="0.01" value="0"></label>
+      <label>Internet/Téléphone (€)<input id="internet" type="number" inputmode="decimal" step="0.01" value="0"></label>
+      <label>Assurances (€)<input id="assurances" type="number" inputmode="decimal" step="0.01" value="0"></label>
+      <label>Abonnements (€)<input id="abos" type="number" inputmode="decimal" step="0.01" value="0"></label>
+      <label>Transports (€)<input id="transports" type="number" inputmode="decimal" step="0.01" value="0"></label>
+    </div>
+    <div class="row">
+      <button class="btn" id="btnCalcCharges">Mettre à jour</button>
+      <div class="spacer"></div>
+      <div class="kpi">Total charges fixes : <strong id="chargesFixes">—</strong></div>
+      <div class="kpi">Reste à vivre : <strong id="resteVivre">—</strong><span class="badge" id="badgeReste"></span></div>
+    </div>
+    <canvas id="chartSalaire"></canvas>
+  </section>
+
+  <section id="viewConge" class="card" style="display:none">
+    <h2>Congés & RTT</h2>
+    <div class="row">
+      <label>Date d’embauche<input id="embauche" type="date"></label>
+      <label>Droits RTT/an<input id="rttAn" type="number" step="1" value="12"></label>
+      <label>Droits CP/an<input id="cpAn" type="number" step="1" value="25"></label>
+    </div>
+    <button class="btn" id="btnCalcConges">Mettre à jour</button>
+    <div class="row">
+      <div class="kpi">RTT restants : <strong id="rttRest">—</strong></div>
+      <div class="kpi">CP restants : <strong id="cpRest">—</strong></div>
+    </div>
+
+    <h3>Historique</h3>
+    <div class="row">
+      <label>Type
+        <select id="typeConge"><option>RTT</option><option>CP</option></select>
+      </label>
+      <label>Date<input id="dateConge" type="date"></label>
+      <button class="btn secondary" id="btnAjoutConge">Ajouter</button>
+    </div>
+    <ul id="listConges" style="margin-top:8px"></ul>
+  </section>
+
+  <section id="viewEpargne" class="card" style="display:none">
+    <h2>Épargne</h2>
+    <div class="kpi">Reste à vivre (auto) : <strong id="resteAuto">—</strong></div>
+
+    <h3>Profil & allocation conseillée</h3>
+    <div class="row">
+      <label>Profil
+        <select id="profil">
+          <option value="prudent">Prudent (≈2%/an, conseille ~10%)</option>
+          <option value="equilibre">Équilibré (≈5%/an, conseille ~20%)</option>
+          <option value="agressif">Agressif (≈8%/an, conseille ~30%)</option>
+        </select>
+      </label>
+      <label>Taux annuel (%)<input id="tauxAnnuel" type="number" inputmode="decimal" step="0.01" value="2"></label>
+    </div>
+    <div class="row">
+      <label>Mode de saisie
+        <select id="modeEpargne">
+          <option value="pourcentage">% du reste à vivre</option>
+          <option value="montant">Montant fixe (€ / mois)</option>
+        </select>
+      </label>
+      <label id="blocPct">Pourcentage (%)<input id="pctEpargne" type="number" inputmode="decimal" step="0.01" value="10"></label>
+      <label id="blocMontant" style="display:none">Montant mensuel (€)<input id="montantEpargne" type="number" inputmode="decimal" step="0.01" value="0"></label>
+    </div>
+
+    <h3>Objectif & Projection</h3>
+    <div class="row">
+      <label>Objectif d'épargne total (€)<input id="objectifEpargne" type="number" inputmode="decimal" step="0.01" value="0"></label>
+      <label>Seuil alerte reste à vivre (€)<input id="seuilReste" type="number" inputmode="decimal" step="1" value="200"></label>
+    </div>
+    <div class="row">
+      <label>Durée (années)<input id="duree" type="number" step="1" value="10"></label>
+      <div class="spacer"></div>
+      <button class="btn" id="btnCalcEpargne">Calculer l’épargne</button>
+    </div>
+
+    <div class="row">
+      <div class="kpi">Épargne mensuelle retenue : <strong id="mensuelRetenu">—</strong></div>
+      <div class="kpi">Cumul sans rendement : <strong id="cumulSimple">—</strong></div>
+      <div class="kpi">Cumul avec rendement : <strong id="cumulCompose">—</strong><span id="progressObj"></span></div>
+    </div>
+
+    <canvas id="chartEpargne"></canvas>
+  </section>
+
+  <section id="viewOutils" class="card" style="display:none">
+    <h2>Outils</h2>
+    <details open>
+      <summary>Notes rapides</summary>
+      <textarea id="notes" rows="4" placeholder="Écris ici..."></textarea>
+      <button class="btn secondary" id="btnSaveNotes">Sauvegarder</button>
+    </details>
+    <div class="spacer"></div>
+    <details>
+      <summary>Convertisseurs</summary>
+      <div class="row">
+        <div>
+          <label>Heures → Jours (base 7h)<input id="heures" type="text" inputmode="decimal" placeholder="35"></label>
+          <button class="btn ghost" id="btnConvHeures">Convertir</button>
+          <div class="kpi">Équiv. jours : <strong id="joursEq">—</strong></div>
+        </div>
+        <div>
+          <label>€ → $ (taux approx 1.07)<input id="euros" type="text" inputmode="decimal" placeholder="100"></label>
+          <button class="btn ghost" id="btnConvEuros">Convertir</button>
+          <div class="kpi">Montant en $ : <strong id="usdEq">—</strong></div>
+        </div>
+      </div>
+    </details>
+    <div class="spacer"></div>
+    <details>
+      <summary>Installation (PWA)</summary>
+      <button class="btn" id="btnInstallPWA">Vérifier l'installabilité</button>
+      <div class="hint">Si tout est ok, Chrome proposera « Installer » dans le menu ⋮ ou l’icône à droite de l’URL.</div>
+    </details>
+  </section>
+
+  <div class="bottomnav">
+    <button id="btmSalaire" class="tab active">Salaire</button>
+    <button id="btmConge" class="tab">Congés</button>
+    <button id="btmEpargne" class="tab">Épargne</button>
+    <button id="btmOutils" class="tab">Outils</button>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let netApresGlobal=0, resteVivreGlobal=0; let myChartSalaire, myChartEpargne; let currentProfile=null;
+const rootEl=document.getElementById('appRoot'); const savedTheme=localStorage.getItem('eq_theme')||'light'; if(savedTheme==='dark'){rootEl.classList.add('dark')} document.getElementById('toggleTheme').onclick=()=>{rootEl.classList.toggle('dark'); localStorage.setItem('eq_theme',rootEl.classList.contains('dark')?'dark':'light')};
+
+function defaultProfile(name='Profil 1'){ return { name, salaire:{brut:3000,charges:23,pas:0,prime:0}, chargesFixes:{loyer:0,energie:0,internet:0,assurances:0,abos:0,transports:0}, conges:{embauche:'',rttAn:12,cpAn:25,hist:[]}, epargne:{profil:'prudent',tauxAnnuel:2,mode:'pourcentage',pct:10,montant:0,duree:10,objectif:0,seuilReste:200}, notes:'' }; }
+function getProfiles(){ let p=JSON.parse(localStorage.getItem('eq_profiles')||'[]'); if(!Array.isArray(p)||p.length===0){p=[defaultProfile()]; localStorage.setItem('eq_profiles',JSON.stringify(p))} return p }
+function saveProfiles(list){ localStorage.setItem('eq_profiles',JSON.stringify(list)) }
+function loadProfileNames(){ const sel=document.getElementById('profileSelect'); sel.innerHTML=''; getProfiles().forEach((p,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent=p.name; sel.appendChild(opt) }) }
+function setCurrentProfileIndex(i){ document.getElementById('profileSelect').value=i }
+function getCurrentProfileIndex(){ return +document.getElementById('profileSelect').value||0 }
+function applyProfile(p){ currentProfile=p; setVal('brut',p.salaire.brut); setVal('charges',p.salaire.charges); setVal('pas',p.salaire.pas); setVal('prime',p.salaire.prime); ['loyer','energie','internet','assurances','abos','transports'].forEach(k=>setVal(k,p.chargesFixes[k]||0)); setVal('embauche',p.conges.embauche||''); setVal('rttAn',p.conges.rttAn||12); setVal('cpAn',p.conges.cpAn||25); localStorage.setItem('conges',JSON.stringify(p.conges.hist||[])); setVal('profil',p.epargne?.profil||'prudent'); setVal('tauxAnnuel',p.epargne?.tauxAnnuel??2); setVal('modeEpargne',p.epargne?.mode||'pourcentage'); document.getElementById('blocPct').style.display=(p.epargne?.mode!=='montant')?'block':'none'; document.getElementById('blocMontant').style.display=(p.epargne?.mode==='montant')?'block':'none'; setVal('pctEpargne',p.epargne?.pct??10); setVal('montantEpargne',p.epargne?.montant??0); setVal('duree',p.epargne?.duree??10); setVal('objectifEpargne',p.epargne?.objectif??0); setVal('seuilReste',p.epargne?.seuilReste??200); setVal('notes',p.notes||''); calcSalaire(); calcConges(); loadNotes(); }
+function snapshotFromUI(){ return { name: currentProfile?.name||'Profil', salaire:{brut:+num('brut'),charges:+num('charges'),pas:+num('pas'),prime:+num('prime')}, chargesFixes:{loyer:+num('loyer'),energie:+num('energie'),internet:+num('internet'),assurances:+num('assurances'),abos:+num('abos'),transports:+num('transports')}, conges:{embauche:val('embauche')||'',rttAn:+num('rttAn'),cpAn:+num('cpAn'),hist:JSON.parse(localStorage.getItem('conges')||'[]')}, epargne:{profil:val('profil'),tauxAnnuel:+num('tauxAnnuel'),mode:val('modeEpargne'),pct:+num('pctEpargne'),montant:+num('montantEpargne'),duree:+num('duree'),objectif:+num('objectifEpargne'),seuilReste:+num('seuilReste')}, notes:val('notes')||'' } }
+function initProfiles(){ loadProfileNames(); setCurrentProfileIndex(0); applyProfile(getProfiles()[0]) }
+
+document.getElementById('btnNewProfile').onclick=()=>{ const nm=prompt('Nom du nouveau profil :','Profil '+(getProfiles().length+1)); if(!nm)return; const list=getProfiles(); list.push(defaultProfile(nm)); saveProfiles(list); loadProfileNames(); setCurrentProfileIndex(list.length-1); applyProfile(list[list.length-1]) }
+document.getElementById('btnDupProfile').onclick=()=>{ const idx=getCurrentProfileIndex(); const list=getProfiles(); const copy=JSON.parse(JSON.stringify(list[idx])); copy.name=(copy.name+' (copie)').replace(/\s\(copie\)$/,''); list.push(copy); saveProfiles(list); loadProfileNames(); setCurrentProfileIndex(list.length-1); applyProfile(list[list.length-1]); showToast('Profil dupliqué','ok') }
+document.getElementById('btnSaveProfile').onclick=()=>{ const idx=getCurrentProfileIndex(); const list=getProfiles(); const snap=snapshotFromUI(); snap.name=list[idx].name; list[idx]=snap; saveProfiles(list); showToast('Profil sauvegardé ✅','ok') }
+document.getElementById('btnRenameProfile').onclick=()=>{ const idx=getCurrentProfileIndex(); const list=getProfiles(); const currentName=list[idx]?.name||'Profil'; const nm=prompt('Nouveau nom du profil :',currentName); if(!nm||nm.trim()===currentName)return; list[idx].name=nm.trim(); saveProfiles(list); loadProfileNames(); setCurrentProfileIndex(idx); showToast('Nom mis à jour','ok') }
+document.getElementById('btnDeleteProfile').onclick=()=>{ const idx=getCurrentProfileIndex(); const list=getProfiles(); if(list.length<=1){ alert('Il faut garder au moins un profil.'); return } if(confirm(`Supprimer le profil "${list[idx].name}" ?`)){ list.splice(idx,1); saveProfiles(list); loadProfileNames(); setCurrentProfileIndex(0); applyProfile(getProfiles()[0]); showToast('Profil supprimé','warn') } }
+document.getElementById('btnExportProfiles').onclick=()=>{ const data=JSON.stringify(getProfiles(),null,2); const blob=new Blob([data],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='equilibrio-profils.json'; a.click(); URL.revokeObjectURL(a.href); showToast('Export effectué','ok') }
+document.getElementById('btnImportProfiles').onclick=()=>document.getElementById('importFile').click()
+document.getElementById('importFile').addEventListener('change',e=>{ const f=e.target.files?.[0]; if(!f)return; const reader=new FileReader(); reader.onload=()=>{ try{ const parsed=JSON.parse(reader.result); if(!Array.isArray(parsed)) throw new Error('Format'); saveProfiles(parsed); loadProfileNames(); setCurrentProfileIndex(0); applyProfile(getProfiles()[0]); showToast('Import réussi','ok') }catch(err){ showToast('Import invalide','danger') } }; reader.readAsText(f) })
+document.getElementById('profileSelect').onchange=e=>{ applyProfile(getProfiles()[+e.target.value||0]) }
+
+function calcSalaire(){ const brut=num('brut'), charges=num('charges')/100, pas=num('pas')/100; const netAvant=brut*(1-charges); const netImposable=netAvant+brut*0.029; const mntPAS=netImposable*pas; const netApres=netAvant-mntPAS; netApresGlobal=netApres; setTxt('netAvant',euros(netAvant)); setTxt('netImposable',euros(netImposable)); setTxt('montantPAS',euros(mntPAS)); setTxt('netApres',euros(netApres)); setTxt('sal12',euros(netApres*12)+'/an'); setTxt('sal13',euros(netApres*13)+'/an'); calcCharges() }
+function calcPrime(){ const brut=num('prime'), charges=num('charges')/100, pas=num('pas')/100; const netAvant=brut*(1-charges); const netImposable=netAvant+brut*0.029; const mntPAS=netImposable*pas; const netApres=netAvant-mntPAS; setTxt('primeNet',euros(netApres)) }
+function calcCharges(){ const total=num('loyer')+num('energie')+num('internet')+num('assurances')+num('abos')+num('transports'); const reste=(netApresGlobal||0)-total; resteVivreGlobal=reste; setTxt('chargesFixes',euros(total)); setTxt('resteVivre',euros(reste)); setTxt('resteAuto',euros(reste)); const badge=(reste<=0)?'⚠️ négatif':(reste<200?'serré':'ok'); document.getElementById('badgeReste').textContent=`(${badge})`; const seuil=num('seuilReste')||0; if(seuil && reste<seuil){ showToast(`Reste à vivre sous le seuil (${euros(reste)} < ${euros(seuil)})`,'warn') } showChartSalaire(total,reste) }
+function showChartSalaire(chargesFixes,reste){ const brut=num('brut'), charges=num('charges')/100, pas=num('pas')/100; const netAvant=brut*(1-charges); const netImposable=netAvant+brut*0.029; const mntPAS=netImposable*pas; const ctx=document.getElementById('chartSalaire').getContext('2d'); if(myChartSalaire) myChartSalaire.destroy(); myChartSalaire=new Chart(ctx,{type:'doughnut',data:{labels:['Reste à vivre','Charges fixes','Charges sociales','Impôt'],datasets:[{data:[reste,chargesFixes,brut*charges,mntPAS]}]},options:{plugins:{legend:{position:'bottom'}},animation:{duration:500,easing:'easeOutQuart'}}}) }
+
+function calcConges(){ const embauche=new Date(val('embauche')||new Date()); const today=new Date(); const diffDays=Math.floor((today-embauche)/(1000*60*60*24)); const rttAn=num('rttAn')||12, cpAn=num('cpAn')||25; const acquisRtt=(rttAn/365)*diffDays, acquisCp=(cpAn/365)*diffDays; const hist=JSON.parse(localStorage.getItem('conges')||'[]'); const prisRtt=hist.filter(x=>x.type=="RTT").length; const prisCp=hist.filter(x=>x.type=="CP").length; setTxt('rttRest',(acquisRtt-prisRtt).toFixed(1)); setTxt('cpRest',(acquisCp-prisCp).toFixed(1)); renderConges() }
+function ajoutConge(){ const type=val('typeConge'), date=val('dateConge'); if(!date)return; const hist=JSON.parse(localStorage.getItem('conges')||'[]'); hist.push({type,date}); localStorage.setItem('conges',JSON.stringify(hist)); calcConges() }
+function renderConges(){ const hist=JSON.parse(localStorage.getItem('conges')||'[]'); const ul=document.getElementById('listConges'); ul.innerHTML=''; hist.forEach(c=>{ const li=document.createElement('li'); li.textContent=`${c.type} le ${c.date}`; ul.appendChild(li) }) }
+
+['profil','modeEpargne'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ if(id==='profil') onProfilChange(); if(id==='modeEpargne') onModeChange() }))
+function onProfilChange(){ const p=val('profil'); if(p==='prudent'){ setVal('tauxAnnuel',2); setVal('pctEpargne',10) } if(p==='equilibre'){ setVal('tauxAnnuel',5); setVal('pctEpargne',20) } if(p==='agressif'){ setVal('tauxAnnuel',8); setVal('pctEpargne',30) } }
+function onModeChange(){ const m=val('modeEpargne'); document.getElementById('blocPct').style.display=(m==='pourcentage')?'block':'none'; document.getElementById('blocMontant').style.display=(m==='montant')?'block':'none' }
+function calcEpargne(){ const reste=resteVivreGlobal||0; const mode=val('modeEpargne'); const tauxAnnuel=(num('tauxAnnuel')||0)/100; const annees=num('duree')||1; const objectif=num('objectifEpargne')||0; let mensuel=0; if(mode==='pourcentage'){ const pct=(num('pctEpargne')||0)/100; mensuel=Math.max(0,reste*pct) } else { mensuel=Math.max(0,num('montantEpargne')||0) } const simple=mensuel*12*annees; const compose=futureValueMonthly(mensuel,tauxAnnuel,annees); setTxt('mensuelRetenu',euros(mensuel)); setTxt('cumulSimple',euros(simple)); setTxt('cumulCompose',euros(compose)); let badge=''; if(objectif>0){ const pct=Math.min(100,Math.round((compose/objectif)*100)); badge=`(${pct}% de l'objectif)`; if(pct>=100) showToast("Objectif d'épargne atteint 🎯",'ok') } document.getElementById('progressObj').textContent=badge; showChartEpargne(mensuel,tauxAnnuel,annees) }
+function showChartEpargne(mensuel,r,years){ const months=years*12, labels=[], data=[]; let v=0; const i=r/12; for(let m=1;m<=months;m++){ v=v*(1+i)+mensuel; if(m%12===0){ labels.push('An '+(m/12)); data.push(v) } } const ctx=document.getElementById('chartEpargne').getContext('2d'); if(myChartEpargne) myChartEpargne.destroy(); myChartEpargne=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Capital (intérêts composés)',data,tension:.25,pointRadius:2,borderWidth:2}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'€ '+Math.round(v).toLocaleString('fr-FR')}}},animation:{duration:600,easing:'easeOutQuart'}}}) }
+function futureValueMonthly(pmt,annualRate,years){ const i=annualRate/12; const n=years*12; if(i===0) return pmt*n; return pmt*((Math.pow(1+i,n)-1)/i) }
+
+document.getElementById('btnSaveNotes').onclick=()=>saveNotes(); function saveNotes(){ const idx=getCurrentProfileIndex(); const list=getProfiles(); list[idx].notes=val('notes'); saveProfiles(list); localStorage.setItem('notes',val('notes')); showToast('Notes sauvegardées','ok') } function loadNotes(){ setVal('notes',(currentProfile?.notes)||localStorage.getItem('notes')||''); renderConges() }
+
+const num=id=>{ const t=(val(id)||"").toString().replace(',','.'); const n=parseFloat(t); return isNaN(n)?0:n };
+document.getElementById('btnConvHeures').onclick=()=>{ const h=num('heures'); setTxt('joursEq',(h/7).toFixed(2)) };
+document.getElementById('btnConvEuros').onclick=()=>{ const e=num('euros'); setTxt('usdEq',(e*1.07).toFixed(2)) };
+
+['tabSalaire','tabConge','tabEpargne','tabOutils'].forEach(id=>{document.getElementById(id).onclick=()=>showTab(id.replace('tab',''))}); ['btmSalaire','btmConge','btmEpargne','btmOutils'].forEach(id=>{document.getElementById(id).onclick=()=>showTab(id.replace('btm',''))});
+function showTab(t){ document.querySelectorAll('section').forEach(s=>s.style.display='none'); document.getElementById('view'+t).style.display='block'; document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); document.getElementById('tab'+t).classList.add('active'); document.getElementById('btm'+t).classList.add('active'); ['Salaire','Conge','Epargne','Outils'].filter(x=>x!==t).forEach(x=>document.getElementById('btm'+x).classList.remove('active')) }
+
+document.getElementById('btnCalcSalaire').onclick=calcSalaire; document.getElementById('btnCalcPrime').onclick=calcPrime; document.getElementById('btnCalcCharges').onclick=calcCharges; document.getElementById('btnCalcConges').onclick=calcConges; document.getElementById('btnAjoutConge').onclick=ajoutConge; document.getElementById('btnCalcEpargne').onclick=calcEpargne;
+
+const val=id=>document.getElementById(id).value; const setVal=(id,v)=>document.getElementById(id).value=v; const setTxt=(id,t)=>document.getElementById(id).textContent=t; function euros(n){ n=(n||0); return n.toFixed(2).replace('.',',')+' €' } function showToast(msg,type='ok'){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+type+' show'; setTimeout(()=>{ el.className='toast '+type },2200) }
+
+// PWA installability check (optional)
+document.getElementById('btnInstallPWA')?.addEventListener('click', ()=>{
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(()=> showToast('Service worker actif','ok')).catch(()=> showToast('Erreur SW','danger'));
+  } else {
+    showToast('Service worker non supporté','warn');
+  }
+});
+
+initProfiles(); onProfilChange(); onModeChange(); loadNotes(); calcConges();
+</script>
+</body>
+</html>
