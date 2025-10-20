@@ -1,602 +1,774 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Equilibrio Life 1.7.0 — Quotidien + Journal + Donut segmenté</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Equilibrio - v2.0 (Multi-profils, PAS, Bridges, Help)</title>
 <style>
   :root{
-    --bg:#f6f8fb; --card:#ffffff; --ink:#111827; --muted:#6b7280; --accent:#2563eb;
-    --surface:#eef2f7; --ok:#10b981; --warn:#f59e0b; --danger:#ef4444; --line:#d1d5db;
-    --radius:14px;
+    --tap:48px; --gap:12px; --pad:16px; --radius:16px;
+    --bg:#0f1220; --card:#171a2b; --muted:#8a90a6; --text:#e9ecf5; --accent:#6ea8fe;
+    --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --line:#27314f;
+    --shadow:0 6px 24px rgba(0,0,0,.25);
   }
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
-    font:500 16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  *{box-sizing:border-box}
-  .wrap{max-width:980px;margin:8px auto 28px;padding:0 12px}
-  .appbar{position:sticky;top:0;z-index:10;background:var(--bg);
-    display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 4px 8px}
-  h1{font:800 20px/1.1 system-ui;margin:0}
-  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .pill{border:1px solid #cbd5e1;background:#fff;color:#111827;padding:10px 14px;border-radius:999px;cursor:pointer}
-  .tabs{display:flex;gap:8px;flex-wrap:nowrap;overflow:auto;margin-bottom:4px}
-  .tab{border:1px solid #cbd5e1;background:#fff;color:#111827;padding:12px 16px;border-radius:12px;cursor:pointer;flex:0 0 auto}
-  .tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
-  .card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 3px 12px rgba(0,0,0,.06);margin-top:12px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media (max-width:800px){.row{grid-template-columns:1fr}}
-  label{display:flex;flex-direction:column;color:var(--muted);font-size:14px}
-  input,select,textarea{width:100%;max-width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:#111827;margin-top:6px;font-size:16px}
-  .btn{border:none;background:var(--accent);color:#fff;padding:12px 14px;border-radius:10px;cursor:pointer;font-weight:700}
-  .btn.secondary{background:#334155}
-  .btn.ghost{background:transparent;color:#111827;border:1px solid #334155}
-  .btn.warn{background:var(--warn)}
-  .btn.ok{background:var(--ok)}
-  .kpi{background:var(--surface);border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:12px;margin-top:8px}
-  .kpi strong{float:right}
-  .hint{color:var(--muted);font-size:13px;margin-top:4px}
-  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  @media (max-width:800px){.grid3{grid-template-columns:1fr}}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    background:var(--bg); color:var(--text);
+    padding: env(safe-area-inset-top) 0 calc(56px + env(safe-area-inset-bottom));
+    overflow-x:hidden;
+  }
+  .appbar{position:sticky; top:0; z-index:60; display:flex; align-items:center; justify-content:space-between;
+    padding:12px var(--pad); background:#0f1220; gap:12px;}
+  .title{font-weight:700; letter-spacing:.3px; white-space:nowrap}
+  .profile{display:flex; align-items:center; gap:8px; background:#1f2338; border:1px solid var(--line);
+    padding:4px 8px; border-radius:12px;}
+  .profile select{background:transparent; color:var(--text); border:0; outline:none; font-size:14px}
+  .profile .btn{min-height:auto}
+  .kebab{width:40px; height:40px; display:grid; place-items:center; border-radius:12px;
+    background:#1f2338; cursor:pointer; user-select:none}
+  .sheet{position:fixed; right:8px; top:56px; background:#101426; border:1px solid var(--line);
+    border-radius:16px; box-shadow:var(--shadow); width:320px; display:none}
+  .sheet.open{display:block}
+  .sheet h4{margin:12px 16px 4px; color:var(--muted); font-weight:600; font-size:12px}
+  .sheet button{width:100%; text-align:left; background:transparent; color:var(--text); border:0; padding:12px 16px; cursor:pointer}
+  .sheet button:hover{background:#1a1f35}
 
-  /* DONUT */
-  .donutBox{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-  .donut{width:140px;height:140px;overflow:visible;flex-shrink:0}
-  .donut text#donutMain{font-size:16px;font-weight:800;text-anchor:middle;dominant-baseline:middle}
-  .donut text.small{font-size:10px;font-weight:600;fill:#6b7280;text-anchor:middle;dominant-baseline:middle}
-  .legend{display:flex;gap:12px;flex-wrap:wrap}
-  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;font-size:12px}
-  .dot{width:10px;height:10px;border-radius:999px}
+  .container{padding:0 var(--pad) var(--pad)}
+  .cards{display:flex; flex-direction:column; gap:12px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:16px; box-shadow:var(--shadow)}
+  .muted{color:var(--muted)}
+  .row{display:flex; gap:8px; flex-wrap:wrap}
+  .btn{min-height:var(--tap); padding:0 14px; border-radius:12px; border:1px solid var(--line);
+    background:#1f2338; color:var(--text); cursor:pointer}
+  .btn.primary{background:linear-gradient(180deg, #2f6bff, #2658d6); border:0}
 
-  /* Floating action button */
-  .fab{position:fixed;right:18px;bottom:86px;background:var(--accent);color:#fff;border:none;border-radius:999px;width:56px;height:56px;font-size:28px;cursor:pointer;box-shadow:0 6px 20px rgba(37,99,235,.4)}
-  /* Bottom Nav */
-  .bottomnav{position:sticky;bottom:0;left:0;right:0;background:var(--bg);display:flex;gap:8px;justify-content:space-between;padding:10px 6px}
-  .bottomnav .tab{flex:1;text-align:center}
-  #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:.25s}
+  .kpis{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .kpi h2{margin:0; font-size:28px}
 
-  /* Modal */
-  .modal{position:fixed;inset:0;background:rgba(17,24,39,.5);display:none;align-items:center;justify-content:center;padding:20px}
-  .modal .sheet{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+  .pie-wrap{display:grid; place-items:center}
+  svg{max-width:420px; width:100%}
+  .legend{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px}
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:14px}
+  .dot{width:12px; height:12px; border-radius:3px; display:inline-block}
 
-  table{width:100%;border-collapse:collapse;margin-top:8px}
-  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
-  th{color:#6b7280;font-weight:700}
+  .coach{border-left:6px solid var(--accent)}
+  .coach.good{border-left-color:var(--good)}
+  .coach.warn{border-left-color:var(--warn)}
+  .coach.bad{border-left-color:var(--bad)}
+  .coach .tag{display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; margin-right:8px; background:#1f2338}
+
+  input, select, textarea{width:100%; font-size:16px; min-height:var(--tap); padding:10px 12px;
+    border-radius:12px; border:1px solid #2a3556; background:#0f1326; color:var(--text)}
+  label{display:block; font-size:13px; color:var(--muted); margin:8px 2px}
+  .grid{display:grid; gap:12px}
+  .g2{grid-template-columns:1fr 1fr}
+
+  .bottom-nav{position:fixed; z-index:65; left:0; right:0; bottom:0; background:#101426;
+    border-top:1px solid var(--line); display:grid; grid-template-columns:repeat(4,1fr)}
+  .tab{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    padding:8px 4px; color:var(--muted); text-decoration:none; font-size:12px; user-select:none}
+  .tab.active{color:#cfe0ff}
+
+  .cta-sticky{position:sticky; bottom:0; padding:12px env(safe-area-inset-right) calc(12px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
+    background:linear-gradient(0deg, rgba(15,18,32,1) 0%, rgba(15,18,32,0) 100%)}
+
+  details{background:#101426; border:1px solid var(--line); border-radius:12px; padding:8px 12px}
+  details>summary{cursor:pointer; list-style:none}
+  details>summary::-webkit-details-marker{display:none}
+
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:100}
+  .modal .panel{background:#0f1326; border:1px solid var(--line); border-radius:16px; width:min(720px, 92vw); max-height:85vh; overflow:auto; padding:16px; box-shadow:var(--shadow)}
+
+  .hidden{display:none !important}
+
+  @media (max-width:420px){
+    .kpis{grid-template-columns:1fr}
+    .legend{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
   <div class="appbar">
-    <h1>Equilibrio Life</h1>
-    <div class="toolbar">
-      <select id="profileSelect" aria-label="Profil"></select>
-      <button class="pill" id="btnNewProfile" type="button" title="Nouveau profil">+ Profil</button>
-      <button class="pill" id="btnRenameProfile" type="button" title="Renommer ce profil">✏️ Renommer</button>
-      <button class="pill" id="btnSaveProfile" type="button" title="Sauver ce profil">💾 Sauver</button>
-      <button class="pill" id="btnDeleteProfile" type="button" title="Supprimer ce profil">🗑️ Suppr.</button>
-      <button class="pill" id="btnHelp" type="button" title="Aide rapide">❓ Aide</button>
+    <div class="title">Equilibrio</div>
+    <div class="profile">
+      <label for="profileSelect" class="muted" style="font-size:12px">Profil</label>
+      <select id="profileSelect" title="Choisir un profil"></select>
+      <button id="btnAddProfile" class="btn" title="Nouveau profil">+</button>
+      <button id="btnProfileMenu" class="btn" title="Options profil">⋯</button>
+    </div>
+    <div id="kebab" class="kebab" title="Menu">...</div>
+  </div>
+
+  <div id="sheet" class="sheet" role="dialog" aria-modal="true">
+    <h4>ACTIONS</h4>
+    <button id="btnExportCSV">Exporter CSV (profil courant)</button>
+    <button id="btnExportJSON">Exporter JSON (profil courant)</button>
+    <button id="btnImportJSON">Importer JSON dans ce profil</button>
+    <button id="btnPrint">Imprimer / PDF</button>
+    <h4>AIDE</h4>
+    <button id="btnGuide">Guide pas à pas</button>
+    <button id="btnAbout">À propos</button>
+  </div>
+
+  <div id="profileSheet" class="sheet" style="right:56px" role="dialog" aria-modal="true">
+    <h4>PROFIL</h4>
+    <button id="btnRenameProfile">Renommer</button>
+    <button id="btnDuplicateProfile">Dupliquer</button>
+    <button id="btnDeleteProfile">Supprimer</button>
+  </div>
+
+  <div id="helpModal" class="modal" aria-hidden="true">
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <h3 style="margin:0">Guide pas à pas</h3>
+        <button id="helpClose" class="btn">Fermer</button>
+      </div>
+      <ol style="line-height:1.6">
+        <li><strong>Choisir ou créer un profil</strong> : En haut, sélectionne un profil (perso, couple, pro) ou crée-en un nouveau.</li>
+        <li><strong>Renseigner tes revenus</strong> : Onglet <em>Plus</em>. Utilise le convertisseur Brut → Net (ajuste charges et PAS), puis <em>Utiliser comme Salaire net</em>.</li>
+        <li><strong>Entrer tes dépenses</strong> : Toujours dans <em>Plus</em>, saisis les montants par catégories. Ajoute/supprime selon ta situation.</li>
+        <li><strong>Vue</strong> : Dans <em>Vue</em>, vérifie le reste à vivre, le graphique et les conseils du mini‑coach.</li>
+        <li><strong>Épargne</strong> : Dans <em>Épargne</em>, choisis un taux rapide (3%, 5%, 10%) ou un montant; projection instantanée.</li>
+        <li><strong>Emprunt</strong> : Dans <em>Emprunt</em>, active <em>Utiliser mes revenus déclarés</em> pour importer automatiquement les revenus du profil.</li>
+        <li><strong>Exporter/Importer</strong> : Menu ... (en haut à droite) pour sauvegarder en JSON/CSV ou recharger des données. Chaque profil est indépendant.</li>
+        <li><strong>Astuce</strong> : Le mini‑coach signale les catégories au‑dessus de repères simples et propose une épargne mensuelle raisonnable.</li>
+      </ol>
+      <div class="muted" style="font-size:12px">Avertissement : Calculs simplifiés, à titre informatif.</div>
     </div>
   </div>
 
-  <div class="tabs">
-    <button data-tab="Today" class="tab active" type="button">Aujourd’hui</button>
-    <button data-tab="Budget" class="tab" type="button">Budget & Fixes</button>
-    <button data-tab="EpargneFromReste" class="tab" type="button">Épargne</button>
-    <button data-tab="Emprunt" class="tab" type="button">Emprunt</button>
-    <button data-tab="Aide" class="tab" type="button">Aide</button>
-  </div>
-
-  <!-- AUJOURD'HUI -->
-  <section id="viewToday" class="card">
-    <h2>Vue du jour</h2>
-    <div class="row">
-      <div>
-        <div class="kpi">Reste à vivre initial : <strong id="resteInitial">—</strong></div>
-        <div class="kpi">Variables dépensées (mois) : <strong id="varsDepensees">—</strong></div>
-        <div class="kpi">Reste variables dispo : <strong id="varsRestantes">—</strong></div>
-        <div class="kpi">Reste conseillé / jour : <strong id="parJour">—</strong></div>
-        <div class="hint" id="alertMsg"></div>
-        <div class="row" style="margin-top:8px">
-          <label>Budget variables du mois (€)
-            <input id="budgetVars" type="number" step="0.01" placeholder="ex: 600">
-          </label>
-          <button class="btn ok" id="btnSaveBudget" type="button" style="align-self:end">Enregistrer</button>
+  <main class="container">
+    <div id="coach" class="card coach">
+      <div class="row" style="align-items:center; justify-content:space-between; gap:8px">
+        <div>
+          <span id="coachTag" class="tag">-</span>
+          <strong id="coachTitle">Analyse en cours...</strong>
+          <div id="coachMsg" class="muted" style="margin-top:4px">Renseigne tes revenus et dépenses pour voir des recommandations.</div>
         </div>
-        <div class="hint">Fixe-le une fois, modifiable quand tu veux. Sert au calcul des alertes.</div>
+        <div class="row" style="gap:8px">
+          <button id="btnCoachDetails" class="btn">Détails</button>
+          <button id="goToPlus" class="btn">Compléter mes données</button>
+        </div>
       </div>
-      <div>
-        <h3>Vue rapide</h3>
-        <div class="donutBox">
-          <svg id="donut" class="donut" viewBox="0 0 42 42" aria-label="Répartition">
-            <!-- Fond -->
-            <circle cx="21" cy="21" r="15.915" fill="white"/>
-            <circle cx="21" cy="21" r="15.915" fill="none" stroke="#e5e7eb" stroke-width="8"></circle>
-            <!-- Segments: ordre = impots, fixes, variables, reste -->
-            <g id="arcs" transform="rotate(-90 21 21)">
-              <circle id="arcImpots"    cx="21" cy="21" r="15.915" fill="none" stroke="#8b5cf6" stroke-width="8" stroke-dasharray="0 100" stroke-linecap="butt"></circle>
-              <circle id="arcFixes"     cx="21" cy="21" r="15.915" fill="none" stroke="#f59e0b" stroke-width="8" stroke-dasharray="0 100" stroke-linecap="butt"></circle>
-              <circle id="arcVariables" cx="21" cy="21" r="15.915" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="0 100" stroke-linecap="butt"></circle>
-              <circle id="arcReste"     cx="21" cy="21" r="15.915" fill="none" stroke="#10b981" stroke-width="8" stroke-dasharray="0 100" stroke-linecap="butt"></circle>
-            </g>
-            <!-- Centre -->
-            <circle cx="21" cy="21" r="9.5" fill="white"></circle>
-            <text x="21" y="20.5" id="donutMain">—</text>
-            
-          </svg>
-          <div>
-            <div class="legend">
-              <span class="badge"><span class="dot" style="background:#8b5cf6"></span> Impôts</span>
-              <span class="badge"><span class="dot" style="background:#f59e0b"></span> Fixes</span>
-              <span class="badge"><span class="dot" style="background:#ef4444"></span> Variables</span>
-              <span class="badge"><span class="dot" style="background:#10b981"></span> Reste</span>
-            </div>
-            <div class="kpi">Net après impôt : <strong id="netApres_today">—</strong></div>
-            <div class="hint">Base du donut : <em>net avant PAS</em> (net + impôts prélevés à la source).</div>
+    </div>
+
+    <section id="view-dashboard" class="cards">
+      <div class="card">
+        <div class="kpis">
+          <div class="kpi">
+            <div class="muted">Reste à vivre (mois)</div>
+            <h2 id="kpiReste">- €</h2>
+            <div class="muted" id="kpiResteJour">- €/jour</div>
+          </div>
+          <div class="kpi">
+            <div class="muted">Taux d'épargne potentiel</div>
+            <h2 id="kpiTaux">- %</h2>
+            <div class="muted" id="kpiVariation">Objectif mini : 5 %</div>
           </div>
         </div>
       </div>
-    </div>
 
-    <h3 style="margin-top:12px">Dépenses variables (mois en cours)</h3>
-    <div class="row">
-      <div>
-        <table id="tblDepenses">
-          <thead><tr><th>Date</th><th>Catégorie</th><th>Montant</th><th>Note</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="hint" id="sumLine">Total: —</div>
-        <div class="row" style="margin-top:8px">
-          <button class="btn" id="btnExportCSV" type="button">Exporter CSV</button>
-          <button class="btn secondary" id="btnClearMonth" type="button">Vider le mois</button>
+      <div class="card">
+        <div class="pie-wrap">
+          <svg id="pie" viewBox="0 0 200 200" class="pie" aria-label="Répartition des dépenses"></svg>
+          <div class="legend" id="legend"></div>
         </div>
       </div>
-      <div>
-        <div class="card">
-          <h4>Ajouter une dépense</h4>
-          <label>Date <input id="expDate" type="date"></label>
-          <label>Montant (€) <input id="expAmount" type="number" step="0.01" placeholder="ex: 12.90"></label>
-          <label>Catégorie
-            <select id="expCat">
-              <option>Courses</option><option>Resto</option><option>Transport</option>
-              <option>Loisirs</option><option>Imprévus</option>
-            </select>
-          </label>
-          <label>Note <input id="expNote" type="text" maxlength="80" placeholder="(facultatif)"></label>
-          <button class="btn ok" id="btnAddExp" type="button" style="margin-top:8px">+ Ajouter</button>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- BUDGET (salaire & fixes) -->
-  <section id="viewBudget" class="card" style="display:none">
-    <div class="row">
-      <div>
-        <h2>Budget & Charges fixes</h2>
-        <label>Brut mensuel (€)<input id="brut" type="number" step="0.01" placeholder="3000"></label>
-        <label>Charges salarié (%)<input id="charges" type="number" step="0.01" value="23"></label>
-        <label>Taux PAS (%)<input id="pas" type="number" step="0.01" value="0"></label>
-        <div class="row" style="margin-top:8px">
-          <button class="btn" id="btnCalcSalaire" type="button">Calculer le net</button>
-          <div class="kpi">Net après impôt : <strong id="netApres">—</strong></div>
-        </div>
-        <h3 style="margin-top:8px">Charges fixes (mensuelles)</h3>
+      <div class="card">
         <div class="row">
-          <label>Loyer (€)<input id="loyer" type="number" step="0.01" value="0"></label>
-          <label>Énergie (€)<input id="energie" type="number" step="0.01" value="0"></label>
-          <label>Internet/Téléphone (€)<input id="internet" type="number" step="0.01" value="0"></label>
-          <label>Assurances (€)<input id="assurances" type="number" step="0.01" value="0"></label>
-          <label>Abonnements (€)<input id="abos" type="number" step="0.01" value="0"></label>
-          <label>Transports (€)<input id="transports" type="number" step="0.01" value="0"></label>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <button class="btn secondary" id="btnCalcCharges" type="button">Mettre à jour</button>
-          <div class="kpi">Total charges fixes : <strong id="chargesFixes">—</strong></div>
+          <button class="btn" id="btnRevenus">Gérer les revenus</button>
+          <button class="btn" id="btnDepenses">Gérer les dépenses</button>
+          <button class="btn primary" id="btnTryEpargne">Simuler épargne</button>
         </div>
       </div>
-      <div>
-        <h3>Notes</h3>
-        <div class="hint">Le donut de la page “Aujourd’hui” affiche Impôts (PAS), Fixes, Variables du mois et Reste.</div>
-        <div class="hint">Tu peux gérer plusieurs profils en haut.</div>
-      </div>
-    </div>
-  </section>
 
-  <!-- EPARGNE -->
-  <section id="viewEpargneFromReste" class="card" style="display:none">
-    <h2>Épargne mensuelle à partir du reste à vivre</h2>
-    <div class="kpi">Reste à vivre actuel (depuis Budget) : <strong id="rvRef">—</strong></div>
-    <div class="row" style="margin-top:8px">
-      <label>Capital initial (€)<input id="capInit" type="number" step="0.01" value="0"></label>
-      <label>Montant épargné par mois (€)<input id="epargneMensuelle" type="number" step="0.01" placeholder="ex: 200"></label>
-      <label>Ou % du reste à vivre (%)<input id="pctReste" type="number" step="0.01" value="0"></label>
-      <label>Horizon (années)<input id="horizon" type="number" step="1" value="5"></label>
-    </div>
-    <h3>Rendement</h3>
-    <div class="grid3">
+      <div id="coachDetails" class="card hidden">
+        <h3 style="margin:0 0 8px">Recommandations</h3>
+        <div id="coachList" class="grid"></div>
+      </div>
+    </section>
+
+    <section id="view-epargne" class="cards hidden">
       <div class="card">
-        <label>Préréglages
-          <select id="presetRendement">
-            <option value="3">Prudent ~3%/an</option>
-            <option value="5">Équilibré ~5%/an</option>
-            <option value="7">Dynamique ~7%/an</option>
-            <option value="custom">Personnalisé…</option>
-          </select>
-        </label>
-        <label>Taux annuel (%) — si personnalisé<input id="tauxAnnuel" type="number" step="0.01" value="5"></label>
-        <button class="btn" id="btnSimulerEpargne" type="button" style="margin-top:8px">Simuler</button>
+        <div class="row" style="flex-wrap:nowrap; overflow:auto">
+          <button class="btn rate" data-rate="0">0%</button>
+          <button class="btn rate" data-rate="3">3%</button>
+          <button class="btn rate" data-rate="5">5%</button>
+          <button class="btn rate" data-rate="10">10%</button>
+          <button class="btn rate" data-rate="perso">Perso</button>
+          <button class="btn" id="backToDash">Retour Vue</button>
+        </div>
       </div>
       <div class="card">
-        <div class="kpi">Capital final estimé : <strong id="capFinal">—</strong></div>
-        <div class="kpi">Intérêts cumulés : <strong id="interetsCumules">—</strong></div>
+        <label for="epargneMontant">Montant mensuel épargne suggéré (€)</label>
+        <input id="epargneMontant" type="number" inputmode="decimal" placeholder="Ex: 150" />
+        <div class="grid g2" style="margin-top:12px">
+          <div>
+            <label for="epargneDuree">Durée (mois)</label>
+            <input id="epargneDuree" type="number" inputmode="numeric" value="12" />
+          </div>
+          <div>
+            <label for="epargneRend">Rendement (%) optionnel</label>
+            <input id="epargneRend" type="number" inputmode="decimal" placeholder="0 à 5" />
+          </div>
+        </div>
       </div>
       <div class="card">
-        <h4>Récapitulatif</h4>
-        <div id="recapEpargne" class="hint">Renseigne un montant mensuel ou un % du reste à vivre.</div>
+        <div class="kpi">
+          <div class="muted">Projection</div>
+          <h2 id="epargneProjection">- €</h2>
+          <div class="muted" id="epargneNote">Basé sur tes chiffres actuels.</div>
+        </div>
       </div>
-    </div>
-  </section>
+      <div class="cta-sticky">
+        <button id="btnSaveEpargne" class="btn primary" style="width:100%">Enregistrer comme objectif</button>
+      </div>
+    </section>
 
-  <!-- EMPRUNT -->
-  <section id="viewEmprunt" class="card" style="display:none">
-    <h2>Capacité d'emprunt</h2>
-    <div class="kpi">Net mensuel (depuis Budget) : <strong id="netRef">—</strong></div>
-    <div class="row" style="margin-top:8px">
-      <label>Taux d'endettement max (%)<input id="txEndettement" type="number" step="0.1" value="35"></label>
-      <label>Autres crédits mensuels (€)<input id="autresCredits" type="number" step="0.01" value="0"></label>
-      <label>Taux nominal annuel (%)<input id="txNominal" type="number" step="0.01" value="4"></label>
-      <label>Durée (années)<input id="duree" type="number" step="1" value="25"></label>
-      <label>Assurance emprunteur (%/an du capital initial)<input id="txAssurance" type="number" step="0.01" value="0.25"></label>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button class="btn" id="btnSimulerEmprunt" type="button">Calculer la capacité</button>
-      <div class="kpi">Mensualité max logée : <strong id="mensuMax">—</strong></div>
-      <div class="kpi">Capital empruntable estimé : <strong id="capEmprunt">—</strong></div>
-    </div>
-  </section>
+    <section id="view-emprunt" class="cards hidden">
+      <div class="card">
+        <div class="row" style="align-items:center; justify-content:space-between">
+          <div class="muted">Revenus nets mensuels utilisés ci‑dessous</div>
+          <label style="display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="syncEmprunt" checked>
+            Utiliser mes revenus déclarés
+          </label>
+        </div>
+        <div class="grid g2" style="margin-top:8px">
+          <div>
+            <label for="empRevenus">Revenus nets mensuels (€)</label>
+            <input id="empRevenus" type="number" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="empCharges">Charges récurrentes (€)</label>
+            <input id="empCharges" type="number" inputmode="decimal" />
+          </div>
+          <div>
+            <label for="empTaux">Taux nominal annuel (%)</label>
+            <input id="empTaux" type="number" inputmode="decimal" value="4" />
+          </div>
+          <div>
+            <label for="empDuree">Durée (années)</label>
+            <input id="empDuree" type="number" inputmode="numeric" value="20" />
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="kpis">
+          <div class="kpi">
+            <div class="muted">Mensualité maximale (35 %)</div>
+            <h2 id="empMensu">- €</h2>
+          </div>
+          <div class="kpi">
+            <div class="muted">Montant maximum</div>
+            <h2 id="empMontant">- €</h2>
+          </div>
+        </div>
+        <details style="margin-top:8px">
+          <summary class="muted">Règle : 35 % d'endettement + stress test +1 pt</summary>
+          <div style="margin-top:8px" class="muted">Mensualité max = 35 % des revenus nets − charges récurrentes. Le test à +1 pt de taux donne une marge de sécurité.</div>
+        </details>
+      </div>
+    </section>
 
-  <!-- AIDE -->
-  <section id="viewAide" class="card" style="display:none">
-    <h2>Aide</h2>
-    <h3>Démarrage rapide (3 minutes)</h3>
-    <ol>
-      <li><strong>Va dans “Budget & Fixes”</strong> et remplis : Brut mensuel, % de charges salarié, % PAS (prélevé à la source). Clique “Calculer le net”.</li>
-      <li><strong>Entre tes charges fixes</strong> (loyer, énergie, etc.), puis “Mettre à jour”. Le <em>reste à vivre initial</em> est calculé.</li>
-      <li><strong>Reviens dans “Aujourd’hui”</strong> : choisis ton <em>budget variables du mois</em> (ex. 600€) et “Enregistrer”.</li>
-      <li><strong>Ajoute tes dépenses variables</strong> au fil du mois (montant + catégorie + note optionnelle). Le total s’ajuste et la jauge €/jour aussi.</li>
-    </ol>
+    <section id="view-plus" class="cards hidden">
+      <div class="card">
+        <h3 style="margin:0 0 8px">Revenus</h3>
 
-    <h3>Comment lire l’onglet “Aujourd’hui”</h3>
-    <ul>
-      <li><strong>Reste à vivre initial</strong> = Net après impôt – Charges fixes (de “Budget & Fixes”).</li>
-      <li><strong>Variables dépensées</strong> = somme de tes entrées dans le journal du mois en cours.</li>
-      <li><strong>Reste variables dispo</strong> = Budget variables – Variables dépensées.</li>
-      <li><strong>Reste conseillé / jour</strong> = (Reste variables dispo) ÷ (jours restants du mois).</li>
-      <li><strong>Donut segmenté</strong> : la base est le <em>net avant PAS</em> (ton net + impôts prélevés à la source), découpé en Impôts, Fixes, Variables et Reste. Ça permet de visualiser aussi le poids de l’impôt.</li>
-    </ul>
+        <div class="card" style="background:#12162a">
+          <h4 style="margin:0 0 8px">Convertisseur Brut → Net (mensuel)</h4>
+          <div class="grid g2">
+            <div>
+              <label for="brutVal">Salaire brut (€)</label>
+              <input id="brutVal" type="number" inputmode="decimal" placeholder="Ex: 2500" />
+            </div>
+            <div>
+              <label for="chargesPct">Taux de charges (%)</label>
+              <input id="chargesPct" type="number" inputmode="decimal" value="23" />
+            </div>
+          </div>
+          <div class="grid g2" style="margin-top:8px">
+            <div>
+              <label for="pasPct">PAS - prélèvement à la source (%)</label>
+              <input id="pasPct" type="number" inputmode="decimal" value="0" />
+            </div>
+            <div>
+              <label>Net avant / après PAS</label>
+              <div class="row">
+                <input id="netAvant" type="number" inputmode="decimal" disabled placeholder="Net avant PAS">
+                <input id="netApres" type="number" inputmode="decimal" disabled placeholder="Net après PAS">
+              </div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="applyNetAvant">Utiliser Net avant PAS</button>
+            <button class="btn" id="applyNetApres">Utiliser Net après PAS</button>
+          </div>
+          <div class="muted" style="margin-top:6px; font-size:12px">Approximation simple : Net avant PAS = Brut × (1 − charges%). Net après PAS = Net avant PAS × (1 − PAS%). Ajuste les % selon ta situation.</div>
+        </div>
 
-    <h3>Conseils d’usage</h3>
-    <ul>
-      <li>Fixe un budget variables <em>réaliste</em> : un peu en dessous de ton historique, pas au-dessus.</li>
-      <li>Prends 20 secondes chaque soir pour noter 1–2 dépenses. Le suivi reste utile uniquement s’il est simple.</li>
-      <li>En fin de mois : exporte le CSV, ou note juste le total pour comparer d’un mois sur l’autre.</li>
-    </ul>
+        <div class="grid g2" id="revenusList" style="margin-top:12px"></div>
+        <div class="row" style="margin-top:8px"><button class="btn" id="addRevenu">+ Ajouter un revenu</button></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Dépenses par catégories</h3>
+        <div id="depensesList" class="grid"></div>
+        <div class="row" style="margin-top:8px"><button class="btn" id="addCategorie">+ Ajouter une catégorie</button></div>
+      </div>
+      <div class="cta-sticky">
+        <button id="btnSaveAll" class="btn primary" style="width:100%">Sauvegarder</button>
+      </div>
+    </section>
+  </main>
 
-    <h3>FAQ</h3>
-    <p><strong>Pourquoi le donut n’est pas “Net après impôt” ?</strong><br>
-       Parce qu’on veut visualiser aussi la part d’<em>Impôts (PAS)</em>. Le donut se base sur le <em>net avant PAS</em> = net + impôts. Le KPI “Net après impôt” est affiché juste en dessous pour référence.</p>
-    <p><strong>Je ne veux pas d’Impôts dans le donut.</strong><br>
-       Va pour une version simplifiée (Fixes / Variables / Reste). Dis‑le et on basculera l’affichage.</p>
-    <p><strong>Je change de profil, mes dépenses du mois disparaissent ?</strong><br>
-       Chaque profil a son propre journal mensuel (stocké en local). Tu peux basculer sans rien perdre.</p>
-  </section>
+  <nav class="bottom-nav" role="navigation" aria-label="Navigation principale">
+    <a href="#" class="tab active" data-view="dashboard">Vue</a>
+    <a href="#" class="tab" data-view="epargne">Épargne</a>
+    <a href="#" class="tab" data-view="emprunt">Emprunt</a>
+    <a href="#" class="tab" data-view="plus">Plus</a>
+  </nav>
 
-  <div class="bottomnav">
-    <button data-tab="Today" class="tab active" type="button">Aujourd’hui</button>
-    <button data-tab="Budget" class="tab" type="button">Budget</button>
-    <button data-tab="EpargneFromReste" class="tab" type="button">Épargne</button>
-    <button data-tab="Emprunt" class="tab" type="button">Emprunt</button>
-    <button data-tab="Aide" class="tab" type="button">Aide</button>
-  </div>
-</div>
-<div id="toast"></div>
+  <input type="file" id="fileImport" accept="application/json" class="hidden" />
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  // === Globals
-  let netApresGlobal=0, chargesFixesGlobal=0, resteVivreGlobal=0, mntPASGlobal=0, netAvantGlobal=0;
-  const fmtEUR = new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
-  const euros = n => fmtEUR.format(n || 0);
-  const today = new Date();
-  const monthKey = (d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)(today);
-  const DAYS_IN_MONTH = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
-  const DAYS_LEFT = DAYS_IN_MONTH - today.getDate() + 1; // incl. today
+(function(){
+  /* ---------- Utils ---------- */
+  function clone(obj){ try{ return structuredClone(obj); } catch(e){ return JSON.parse(JSON.stringify(obj)); } }
+  var euro0 = new Intl.NumberFormat('fr-FR',{style:'currency', currency:'EUR', maximumFractionDigits:0});
+  var euro2 = new Intl.NumberFormat('fr-FR',{style:'currency', currency:'EUR', maximumFractionDigits:2});
+  function fmt0(n){ return isNaN(n)?'-': euro0.format(n); }
+  function fmt2(n){ return isNaN(n)?'-': euro2.format(n); }
+  function fmtPct(x){ return isNaN(x)?'-': (x*100).toFixed(1).replace('.',',')+' %'; }
 
-  // === Profiles (reuse 1.6.x logic)
-  function defaultProfile(name='Profil 1'){
-    return {
-      name,
-      salaire:{brut:3000, charges:23, pas:0},
-      chargesFixes:{loyer:0,energie:0,internet:0,assurances:0,abos:0,transports:0},
-      epargne:{capInit:0, epargneMensuelle:0, pctReste:0, horizon:5, tauxAnnuel:5},
-      emprunt:{txEndettement:35, autresCredits:0, txNominal:4, duree:25, txAssurance:0.25},
-      settings:{budgetVars:0}
-    };
-  }
-  function getProfiles(){
-    let p = JSON.parse(localStorage.getItem('eq_profiles_ultra162')||'[]');
-    if(!Array.isArray(p) || p.length===0){ p=[defaultProfile()]; localStorage.setItem('eq_profiles_ultra162',JSON.stringify(p)); }
-    // ensure settings
-    p.forEach(x=>{ if(!x.settings) x.settings={budgetVars:0}; });
-    return p;
-  }
-  function saveProfiles(list){ localStorage.setItem('eq_profiles_ultra162', JSON.stringify(list)); }
-  function loadProfileNames(){ const sel = document.getElementById('profileSelect'); sel.innerHTML=''; getProfiles().forEach((p,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent=p.name; sel.appendChild(opt); }); }
-  function currentProfileIndex(){ return +document.getElementById('profileSelect').value||0; }
-  function currentProfile(){ return getProfiles()[currentProfileIndex()]; }
+  /* ---------- Profiles storage ---------- */
+  var STORAGE_KEY = 'equilibrio_profiles_v2';
+  var DEFAULT_PROFILE_ID = 'default';
 
-  function applyProfile(p){
-    // Budget
-    setVal('brut', p.salaire.brut); setVal('charges', p.salaire.charges); setVal('pas', p.salaire.pas);
-    for(const k of ['loyer','energie','internet','assurances','abos','transports']) setVal(k, p.chargesFixes[k]||0);
-    // Epargne
-    setVal('capInit', p.epargne.capInit||0); setVal('epargneMensuelle', p.epargne.epargneMensuelle||0);
-    setVal('pctReste', p.epargne.pctReste||0); setVal('horizon', p.epargne.horizon||5); setVal('tauxAnnuel', p.epargne.tauxAnnuel||5);
-    document.getElementById('presetRendement').value = ['3','5','7'].includes(String(p.epargne.tauxAnnuel)) ? String(p.epargne.tauxAnnuel) : 'custom';
-    // Emprunt
-    setVal('txEndettement', p.emprunt.txEndettement||35); setVal('autresCredits', p.emprunt.autresCredits||0);
-    setVal('txNominal', p.emprunt.txNominal||4); setVal('duree', p.emprunt.duree||25); setVal('txAssurance', p.emprunt.txAssurance||0.25);
-    // Settings
-    setVal('budgetVars', p.settings?.budgetVars || 0);
-    // Recalcule
-    calcSalaire(); calcCharges(); majResteVivre(); majRefs(); majToday();
-  }
-  function snapshotFromUI(){
-    const base = getProfiles();
-    const idx = currentProfileIndex();
-    return {
-      name: base[idx]?.name || 'Profil',
-      salaire:{brut:+num('brut'), charges:+num('charges'), pas:+num('pas')},
-      chargesFixes:{ loyer:+num('loyer'), energie:+num('energie'), internet:+num('internet'), assurances:+num('assurances'), abos:+num('abos'), transports:+num('transports') },
-      epargne:{ capInit:+num('capInit'), epargneMensuelle:+num('epargneMensuelle'), pctReste:+num('pctReste'), horizon:parseInt(val('horizon')||'5',10), tauxAnnuel:+num('tauxAnnuel') },
-      emprunt:{ txEndettement:+num('txEndettement'), autresCredits:+num('autresCredits'), txNominal:+num('txNominal'), duree:parseInt(val('duree')||'25',10), txAssurance:+num('txAssurance') },
-      settings:{ budgetVars:+num('budgetVars') }
-    };
-  }
-  function initProfiles(){ loadProfileNames(); document.getElementById('profileSelect').value=0; applyProfile(getProfiles()[0]); }
-  document.getElementById('btnNewProfile').addEventListener('click', ()=>{
-    const nm = prompt("Nom du nouveau profil :", "Profil "+(getProfiles().length+1)); if(!nm) return;
-    const list = getProfiles(); list.push(defaultProfile(nm)); saveProfiles(list); loadProfileNames(); document.getElementById('profileSelect').value=list.length-1; applyProfile(list[list.length-1]);
-  });
-  document.getElementById('btnRenameProfile').addEventListener('click', ()=>{
-    const idx = currentProfileIndex(); const list=getProfiles();
-    const nm = prompt("Nouveau nom du profil :", list[idx].name || ("Profil "+(idx+1))); if(!nm) return;
-    list[idx].name = nm.trim(); saveProfiles(list); loadProfileNames(); document.getElementById('profileSelect').value=idx;
-  });
-  document.getElementById('btnSaveProfile').addEventListener('click', ()=>{
-    const idx = currentProfileIndex(); const list=getProfiles(); list[idx] = snapshotFromUI(); saveProfiles(list); toast("Profil enregistré.");
-  });
-  document.getElementById('btnDeleteProfile').addEventListener('click', ()=>{
-    const idx = currentProfileIndex(); const list=getProfiles();
-    if(list.length<=1){ alert("Il faut garder au moins un profil."); return; }
-    if(confirm(`Supprimer le profil "${list[idx].name}" ?`)){
-      list.splice(idx,1); saveProfiles(list); loadProfileNames(); document.getElementById('profileSelect').value=0; applyProfile(getProfiles()[0]);
+  var defaultState = {
+    meta:{ name:'Perso' },
+    revenus:[{ label:'Salaire net', amount: 2000 }],
+    depenses:[
+      { label:'Logement', color:'#6ea8fe', amount: 700 },
+      { label:'Transports', color:'#a78bfa', amount: 200 },
+      { label:'Alimentation', color:'#34d399', amount: 300 },
+      { label:'Sorties et Restos', color:'#f59e0b', amount: 120 },
+      { label:'Abonnements', color:'#ef4444', amount: 60 },
+      { label:'Shopping Loisirs', color:'#f472b6', amount: 90 }
+    ],
+    epargne:{ montant: 150, duree: 12, rendement: 0 },
+    emprunt:{ useSync: true, revenus: 2000, charges: 300, taux: 4, duree: 20 }
+  };
+
+  function loadAll(){
+    try{ var raw = localStorage.getItem(STORAGE_KEY); if(!raw) throw 0;
+      var data = JSON.parse(raw);
+      if(!data || !data.currentId || !data.profiles || !data.profiles[data.currentId]) throw 0;
+      return data;
+    }catch(_){
+      var init = { currentId: DEFAULT_PROFILE_ID, profiles:{} };
+      init.profiles[DEFAULT_PROFILE_ID] = clone(defaultState);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(init));
+      return init;
     }
-  });
-  document.getElementById('profileSelect').addEventListener('change', (e)=>{ applyProfile(getProfiles()[+e.target.value||0]); });
-
-  // === NAV
-  function showTab(t){
-    document.querySelectorAll('section').forEach(s=>s.style.display='none');
-    document.getElementById('view'+t).style.display='block';
-    document.querySelectorAll('.tabs .tab, .bottomnav .tab').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll(`[data-tab="${t}"]`).forEach(b=>b.classList.add('active'));
   }
-  document.querySelectorAll('[data-tab]').forEach(btn=>{ btn.addEventListener('click', ()=> showTab(btn.getAttribute('data-tab'))); });
-  document.getElementById('btnHelp').addEventListener('click', ()=> showTab('Aide'));
+  function saveAll(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(ALL)); }
+  function getState(){ return ALL.profiles[ALL.currentId]; }
+  function setState(s){ ALL.profiles[ALL.currentId] = s; saveAll(); }
 
-  // === DOM utils
-  const val=id=>document.getElementById(id).value;
-  const setVal=(id,v)=>document.getElementById(id).value=v;
-  const setTxt=(id,t)=>document.getElementById(id).textContent=t;
-  const num = (id)=>{ const t=(val(id)||'').toString().replace(',','.'); const n=parseFloat(t); return isNaN(n)?0:n; };
-  function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.style.opacity=1; setTimeout(()=>el.style.opacity=0,1500); }
-
-  // === Calculs Budget
-  function calcSalaire(){
-    const brut=num('brut'), charges=num('charges')/100, pas=num('pas')/100;
-    const netAvant = brut*(1-charges);
-    const netImposable = netAvant + brut*0.029;
-    const mntPAS = netImposable*pas;
-    const netApres = netAvant - mntPAS;
-    netAvantGlobal = netAvant;
-    mntPASGlobal = mntPAS;
-    netApresGlobal = netApres;
-    setTxt('netApres', euros(netApres));
-    setTxt('netApres_today', euros(netApres));
-    majResteVivre(); majRefs(); majToday();
+  function addProfile(name){
+    var id = 'p_'+Math.random().toString(36).slice(2,8);
+    ALL.profiles[id] = clone(defaultState);
+    ALL.profiles[id].meta.name = name||('Profil '+Object.keys(ALL.profiles).length);
+    ALL.currentId = id; saveAll(); renderProfileSelect(); initRender();
   }
-  function calcCharges(){
-    const l=num('loyer'), e=num('energie'), it=num('internet'), a=num('assurances'), ab=num('abos'), t=num('transports');
-    const total = l+e+it+a+ab+t;
-    chargesFixesGlobal = total;
-    setTxt('chargesFixes', euros(total));
-    majResteVivre(); majRefs(); majToday();
+  function renameProfile(id, name){
+    if(!ALL.profiles[id]) return;
+    ALL.profiles[id].meta.name = name||ALL.profiles[id].meta.name; saveAll(); renderProfileSelect();
   }
-  function majResteVivre(){ resteVivreGlobal = Math.max(0, (netApresGlobal||0) - (chargesFixesGlobal||0)); }
-  function majRefs(){ setTxt('rvRef', euros(resteVivreGlobal)); setTxt('netRef', euros(netApresGlobal)); setTxt('resteInitial', euros(resteVivreGlobal)); }
-
-  document.getElementById('btnCalcSalaire').addEventListener('click', calcSalaire);
-  document.getElementById('btnCalcCharges').addEventListener('click', calcCharges);
-
-  // === Journal des dépenses (localStorage par mois et profil)
-  function journalKey(){ return `EQ_JOURNAL_${monthKey}_P${currentProfileIndex()}`; }
-  function loadJournal(){ return JSON.parse(localStorage.getItem(journalKey())||'[]'); }
-  function saveJournal(list){ localStorage.setItem(journalKey(), JSON.stringify(list)); }
-  function addExpense(item){
-    const list = loadJournal(); list.push(item); saveJournal(list); renderJournal();
+  function duplicateProfile(id){
+    var src = ALL.profiles[id]; if(!src) return;
+    var id2 = 'p_'+Math.random().toString(36).slice(2,8);
+    ALL.profiles[id2] = clone(src);
+    ALL.profiles[id2].meta.name = src.meta.name+' (copie)';
+    ALL.currentId = id2; saveAll(); renderProfileSelect(); initRender();
   }
-  function deleteExpense(idx){
-    const list = loadJournal(); list.splice(idx,1); saveJournal(list); renderJournal();
+  function deleteProfile(id){
+    if(Object.keys(ALL.profiles).length<=1) { alert('Impossible : au moins un profil doit rester.'); return; }
+    delete ALL.profiles[id];
+    if(!ALL.profiles[ALL.currentId]){ ALL.currentId = Object.keys(ALL.profiles)[0]; }
+    saveAll(); renderProfileSelect(); initRender();
   }
-  function sumJournal(){ return loadJournal().reduce((s,x)=>s + (+x.amount||0), 0); }
 
-  // UI Journal
-  function renderJournal(){
-    const tb = document.querySelector('#tblDepenses tbody'); tb.innerHTML='';
-    const list = loadJournal();
-    list.forEach((x,i)=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${x.date}</td><td>${x.cat}</td><td>${euros(+x.amount||0)}</td><td>${(x.note||'')}</td><td><button class="btn warn" data-del="${i}" type="button">Suppr.</button></td>`;
-      tb.appendChild(tr);
+  function renderProfileSelect(){
+    var sel = document.getElementById('profileSelect'); sel.innerHTML='';
+    Object.keys(ALL.profiles).forEach(function(id){
+      var opt = document.createElement('option');
+      opt.value = id; opt.textContent = ALL.profiles[id].meta?.name || 'Profil';
+      if(id===ALL.currentId) opt.selected = true;
+      sel.appendChild(opt);
     });
-    tb.querySelectorAll('button[data-del]').forEach(b=>b.addEventListener('click', ()=> deleteExpense(+b.getAttribute('data-del'))));
-    const total = sumJournal();
-    setTxt('sumLine', 'Total : '+euros(total));
-    majToday();
   }
 
-  // Ajouter dépense
-  (function initAddExp(){
-    const d = document.getElementById('expDate'); d.valueAsDate = new Date();
-    document.getElementById('btnAddExp').addEventListener('click', ()=>{
-      const date = val('expDate') || new Date().toISOString().slice(0,10);
-      const amount = parseFloat((val('expAmount')||'').replace(',','.'));
-      if(!(amount>0)) { alert("Montant invalide."); return; }
-      const cat = val('expCat'); const note = val('expNote');
-      addExpense({date, amount, cat, note});
-      setVal('expAmount',''); setVal('expNote',''); toast("Ajouté.");
-    });
-    document.getElementById('btnClearMonth').addEventListener('click', ()=>{
-      if(confirm("Supprimer toutes les dépenses de ce mois ?")){ saveJournal([]); renderJournal(); }
-    });
-    document.getElementById('btnExportCSV').addEventListener('click', ()=>{
-      const rows = [['date','catégorie','montant','note']].concat(loadJournal().map(x=>[x.date,x.cat, String(x.amount).replace('.',','), (x.note||'')]));
-      const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download=`equilibrio_${monthKey}.csv`; a.click();
-      setTimeout(()=>URL.revokeObjectURL(url), 500);
-    });
-  })();
+  /* ---------- App state ---------- */
+  var ALL = loadAll();
+  var state = getState();
 
-  // Budget variables param
-  document.getElementById('btnSaveBudget').addEventListener('click', ()=>{
-    const idx=currentProfileIndex(); const list=getProfiles();
-    const v = +num('budgetVars'); list[idx].settings = list[idx].settings || {}; list[idx].settings.budgetVars = v;
-    saveProfiles(list); toast("Budget variables enregistré."); majToday();
-  });
+  function totalRevenus(){ return state.revenus.reduce(function(a,b){ return a + (Number(b.amount)||0); }, 0); }
+  function totalDepenses(){ return state.depenses.reduce(function(a,b){ return a + (Number(b.amount)||0); }, 0); }
+  function computeReste(){ return Math.max(0, totalRevenus() - totalDepenses()); }
+  function daysInMonth(){ var d=new Date(); return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
 
-  // === Donut segmenté (base = net avant PAS)
-  function setArcs(pImpots, pFixes, pVars, pReste){
-    const arcs=['arcImpots','arcFixes','arcVariables','arcReste'];
-    const P=[pImpots,pFixes,pVars,pReste].map(x=>Math.max(0, Math.min(100,x)));
-    let offset=0;
-    arcs.forEach((id, i)=>{
-      const el=document.getElementById(id);
-      const val = P[i];
-      el.setAttribute('stroke-dasharray', `${val} ${100-val}`);
-      el.setAttribute('stroke-dashoffset', `${offset}`);
-      offset -= val;
+  function coachEvaluate(){
+    var revenus = totalRevenus();
+    var dep = totalDepenses();
+    var reste = revenus - dep;
+    var resteJour = reste / daysInMonth();
+    var tauxEpargne = revenus>0 ? Math.max(reste,0)/revenus : 0;
+
+    var status='warn', title='Équilibre à surveiller';
+    if(resteJour < 10 || tauxEpargne < 0.05 || reste<0){ status='bad'; title='Reste serré'; }
+    if(resteJour > 20 && tauxEpargne >= 0.10){ status='good'; title='Bon cap'; }
+
+    var reps = { 'Logement': 0.35, 'Transports': 0.15, 'Alimentation': 0.15, 'Sorties et Restos': 0.08, 'Abonnements': 0.03, 'Shopping Loisirs': 0.10 };
+    var tips=[];
+    state.depenses.forEach(function(d){
+      var val=Number(d.amount)||0; if(val<=0||revenus<=0) return;
+      var rep = reps[d.label]; if(rep==null) return;
+      var part = val/revenus; if(part > rep + 0.02){
+        var potential = Math.max(0, val - rep*revenus);
+        tips.push('Alerte : '+d.label+' un peu élevé ('+(part*100).toFixed(1)+'% vs repère '+(rep*100).toFixed(0)+'%). Ramener à '+Math.round(rep*100)+'% libère '+fmt0(potential)+'/mois ('+fmt0(potential*12)+'/an).');
+      }
     });
-    document.getElementById('donutMain').textContent = (P[3] + P[2])>0 ? `${Math.round(P[3])}%` : '—';
+    var sugg = Math.round( (Math.min(0.05*revenus, 0.30*Math.max(reste,0))) / 10) * 10;
+    if(sugg>0){ tips.unshift('Suggestion épargne : '+fmt0(sugg)+'/mois → '+fmt0(sugg*12)+' sur 12 mois.'); }
+    return {status:status, title:title, reste:reste, resteJour:resteJour, tauxEpargne:tauxEpargne, tips:tips};
   }
 
-  // === Vue du jour (calculs)
-  function majToday(){
-    // Base du donut = netAvant (avant PAS) pour afficher un segment Impôts
-    const totalBase = Math.max(0, netAvantGlobal || 0);
-    const impots = Math.min(mntPASGlobal||0, totalBase);
-    const fixes = Math.min(chargesFixesGlobal||0, Math.max(0,totalBase-impots));
-    const vars = Math.min(sumJournal(), Math.max(0,totalBase-impots-fixes));
-    const reste = Math.max(0, totalBase - impots - fixes - vars);
+  function renderCoach(){
+    var c = coachEvaluate();
+    var box = document.getElementById('coach');
+    var tag = document.getElementById('coachTag');
+    var title = document.getElementById('coachTitle');
+    var msg = document.getElementById('coachMsg');
+    box.classList.remove('good','warn','bad');
+    box.classList.add(c.status==='good'?'good': c.status==='bad'?'bad':'warn');
+    tag.textContent = c.status==='good'?'VERT': c.status==='bad'?'ROUGE':'ORANGE';
+    title.textContent = c.title;
+    msg.textContent = 'Reste : '+fmt0(c.reste)+' • '+fmt2(c.resteJour)+'/jour • Épargne potentielle : '+fmtPct(c.tauxEpargne);
+    var list = document.getElementById('coachList'); list.innerHTML='';
+    c.tips.slice(0,3).forEach(function(t){
+      var div=document.createElement('div'); div.className='card'; div.style.padding='12px'; div.textContent=t; list.appendChild(div);
+    });
+  }
 
-    const pImp = totalBase>0 ? (impots/totalBase)*100 : 0;
-    const pFix = totalBase>0 ? (fixes/totalBase)*100 : 0;
-    const pVar = totalBase>0 ? (vars/totalBase)*100 : 0;
-    const pRes = 100 - pImp - pFix - pVar;
-    setArcs(pImp, pFix, pVar, pRes);
-
-    // Cartes Aujourd'hui
-    const budgetVars = +num('budgetVars');
-    const depenses = sumJournal();
-    const restantVars = Math.max(0, budgetVars - depenses);
-    const parJour = budgetVars>0 && DAYS_LEFT>0 ? (restantVars / DAYS_LEFT) : 0;
-    setTxt('varsDepensees', euros(depenses));
-    setTxt('varsRestantes', euros(restantVars));
-    setTxt('parJour', euros(parJour));
-
-    // Alerte douce
-    let msg='';
-    const ratio = budgetVars>0 ? depenses / budgetVars : 0;
-    if(budgetVars>0){
-      if(ratio < 0.7) { msg = "Tu es dans le vert. Continue tranquille."; }
-      else if(ratio < 0.9){ msg = "Attention, tu approches de la limite du mois."; }
-      else if(ratio <= 1){ msg = "Zone rouge : ralentir sur le variable pour finir le mois propre."; }
-      else { msg = "Budget dépassé. Cap à tenir : "+euros(parJour)+" par jour pour limiter la casse."; }
-    }else{
-      msg = "Fixe ton budget variables pour activer les alertes.";
+  function drawPie(){
+    var svg = document.getElementById('pie');
+    var legend = document.getElementById('legend');
+    svg.innerHTML=''; legend.innerHTML='';
+    var total = totalDepenses();
+    if(total<=0){
+      svg.innerHTML = '<text x="100" y="100" text-anchor="middle" fill="#8a90a6">Aucune dépense</text>';
+      return;
     }
-    setTxt('alertMsg', msg);
+    var r = 80; var cx=100, cy=100; var PI2 = Math.PI*2;
+    var start = -Math.PI/2;
+    state.depenses.forEach(function(d){
+      var val = Number(d.amount)||0; if(val<=0) return;
+      var frac = val/total; var angle = frac*PI2; var end = start + angle;
+      var x1 = cx + r*Math.cos(start), y1 = cy + r*Math.sin(start);
+      var x2 = cx + r*Math.cos(end),   y2 = cy + r*Math.sin(end);
+      var large = angle>Math.PI?1:0;
+      var path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d','M '+x1+' '+y1+' A '+r+' '+r+' 0 '+large+' 1 '+x2+' '+y2);
+      path.setAttribute('stroke', d.color||'#6ea8fe');
+      path.setAttribute('stroke-width','32');
+      path.setAttribute('fill','none');
+      path.setAttribute('opacity','0.95');
+      svg.appendChild(path);
+      start = end;
+      var li = document.createElement('div'); li.className='legend-item';
+      li.innerHTML = '<span class="dot" style="background:'+d.color+'"></span><span>'+d.label+'</span><span style="margin-left:auto">'+fmt0(val)+'</span>';
+      legend.appendChild(li);
+    });
+    var reste = computeReste();
+    var mid = document.createElementNS('http://www.w3.org/2000/svg','text');
+    mid.setAttribute('x','100'); mid.setAttribute('y','100'); mid.setAttribute('text-anchor','middle'); mid.setAttribute('fill','#cfe0ff'); mid.setAttribute('font-size','16');
+    var t1=document.createElementNS('http://www.w3.org/2000/svg','tspan'); t1.setAttribute('x','100'); t1.setAttribute('dy','0'); t1.textContent='Reste';
+    var t2=document.createElementNS('http://www.w3.org/2000/svg','tspan'); t2.setAttribute('x','100'); t2.setAttribute('dy','18'); t2.textContent=fmt0(reste);
+    mid.appendChild(t1); mid.appendChild(t2); svg.appendChild(mid);
   }
 
-  // === Épargne
-  document.getElementById('presetRendement').addEventListener('change', ()=>{
-    const v = val('presetRendement'); if(v!=='custom'){ setVal('tauxAnnuel', v); }
-  });
-  function epargneMensuelleEffective(){
-    const m = num('epargneMensuelle');
-    const p = num('pctReste');
-    const fromPct = p>0 ? (resteVivreGlobal||0) * p/100 : 0;
-    return m>0 ? m : fromPct;
+  function renderKPIs(){
+    var reste = computeReste();
+    document.getElementById('kpiReste').textContent = fmt0(reste);
+    document.getElementById('kpiResteJour').textContent = fmt2(reste/daysInMonth())+ '/jour';
+    var taux = totalRevenus()>0 ? Math.max(reste,0)/totalRevenus() : 0;
+    document.getElementById('kpiTaux').textContent = fmtPct(taux);
   }
-  function simulerEpargne(){
-    const P = num('capInit');
-    const C = epargneMensuelleEffective();
-    const r = num('tauxAnnuel')/100;
-    const nYears = parseInt(val('horizon')||'5',10);
-    const m = Math.max(0, nYears)*12;
-    const i = r/12;
-    let cap = P*Math.pow(1+i, m) + (C>0 && i>0 ? C*((Math.pow(1+i,m)-1)/i) : (C*m));
-    if(!isFinite(cap)) cap = 0;
-    const totalVerse = P + C*m;
-    const interets = Math.max(0, cap - totalVerse);
-    setTxt('capFinal', euros(cap)); setTxt('interetsCumules', euros(interets));
-    const recap = [
-      'Capital initial : '+euros(P),
-      'Épargne mensuelle : '+euros(C),
-      'Horizon : '+nYears+' ans',
-      'Taux annuel : '+(r*100).toFixed(2)+'%'
-    ].join(' • ');
-    document.getElementById('recapEpargne').textContent = recap;
-  }
-  document.getElementById('btnSimulerEpargne').addEventListener('click', simulerEpargne);
 
-  // === Emprunt
-  function simulerEmprunt(){
-    const net = netApresGlobal||0;
-    const txEnd = num('txEndettement')/100;
-    const autres = num('autresCredits');
-    const mensuMaxTheo = Math.max(0, net*txEnd - autres);
-    const r = num('txNominal')/100/12;
-    const n = Math.max(1, parseInt(val('duree')||'25',10)*12);
-    const aAss = num('txAssurance')/100;
-    const K = (r>0 ? (r/(1-Math.pow(1+r,-n))) : (1/n)) + (aAss/12);
-    const P = K>0 ? (mensuMaxTheo / K) : 0;
-    setTxt('mensuMax', euros(mensuMaxTheo));
-    setTxt('capEmprunt', euros(P));
+  function renderRevenus(){
+    var wrap = document.getElementById('revenusList'); wrap.innerHTML='';
+    state.revenus.forEach(function(r,idx){
+      var box=document.createElement('div'); box.className='grid';
+      box.innerHTML = [
+        '<label>Intitulé</label><input value="', r.label, '" data-idx="', idx, '" data-field="label" class="rev-input">',
+        '<label>Montant (€)</label><input type="number" inputmode="decimal" value="', r.amount, '" data-idx="', idx, '" data-field="amount" class="rev-input">'
+      ].join('');
+      wrap.appendChild(box);
+    });
   }
-  document.getElementById('btnSimulerEmprunt').addEventListener('click', simulerEmprunt);
+  function renderDepenses(){
+    var wrap = document.getElementById('depensesList'); wrap.innerHTML='';
+    state.depenses.forEach(function(d,idx){
+      var box=document.createElement('div'); box.className='grid g2'; box.style.alignItems='end';
+      box.innerHTML = [
+        '<div>',
+        '<label>Catégorie</label>',
+        '<input value="', d.label, '" data-idx="', idx, '" data-field="label" class="dep-input">',
+        '</div>',
+        '<div>',
+        '<label>Couleur</label>',
+        '<input type="color" value="', d.color, '" data-idx="', idx, '" data-field="color" class="dep-input">',
+        '</div>',
+        '<div>',
+        '<label>Montant (€)</label>',
+        '<input type="number" inputmode="decimal" value="', d.amount, '" data-idx="', idx, '" data-field="amount" class="dep-input">',
+        '</div>',
+        '<div>',
+        '<button class="btn del-cat" data-del="', idx, '">Supprimer</button>',
+        '</div>'
+      ].join('');
+      wrap.appendChild(box);
+    });
+  }
 
-  // === Init
-  function initAll(){
-    loadProfileNames();
-    document.getElementById('profileSelect').value=0;
-    applyProfile(getProfiles()[0]);
-    renderJournal();
-    showTab('Today');
+  function showView(v){
+    ['dashboard','epargne','emprunt','plus'].forEach(function(key){
+      var el = document.getElementById('view-'+key);
+      if(!el) return;
+      if(key===v) el.classList.remove('hidden'); else el.classList.add('hidden');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(t){
+      t.classList.toggle('active', t.dataset.view===v);
+    });
+    if(v==='dashboard'){ drawPie(); renderKPIs(); renderCoach(); }
+    if(v==='epargne'){ updateProjection(); }
+    if(v==='emprunt'){ renderEmpruntFields(); }
   }
-  initAll();
-});
-</script>
+
+  function renderEmpruntFields(){
+    var sync = !!state.emprunt.useSync;
+    var total = totalRevenus();
+    var empRevEl = document.getElementById('empRevenus');
+    document.getElementById('syncEmprunt').checked = sync;
+    if(sync){ empRevEl.value = total; empRevEl.disabled = true; }
+    else { empRevEl.disabled = false; empRevEl.value = state.emprunt.revenus; }
+    document.getElementById('empCharges').value = state.emprunt.charges;
+    document.getElementById('empTaux').value = state.emprunt.taux;
+    document.getElementById('empDuree').value = state.emprunt.duree;
+    calcEmprunt();
+  }
+  function calcEmprunt(){
+    var rev = Number(document.getElementById('empRevenus').value||0);
+    var ch  = Number(document.getElementById('empCharges').value||0);
+    var t   = Number(document.getElementById('empTaux').value||0)/100/12;
+    var n   = Number(document.getElementById('empDuree').value||0)*12;
+    var mensuMax = Math.max(0, 0.35*rev - ch);
+    var montant = 0;
+    if(t>0){ montant = mensuMax * (1 - Math.pow(1+t, -n)) / t; } else { montant = mensuMax * n; }
+    document.getElementById('empMensu').textContent = fmt0(mensuMax);
+    document.getElementById('empMontant').textContent = fmt0(montant);
+  }
+
+  function updateProjection(){
+    var m = Number(document.getElementById('epargneMontant').value||0);
+    var n = Number(document.getElementById('epargneDuree').value||0);
+    var r = Number(document.getElementById('epargneRend').value||0)/100/12;
+    var total = 0;
+    if(r>0){ total = m * ((Math.pow(1+r, n) - 1) / r); } else total = m * n;
+    document.getElementById('epargneProjection').textContent = fmt0(total);
+    document.getElementById('epargneNote').textContent = r>0? 'Projection avec intérêt composé mensuel.' : 'Projection sans intérêt.';
+  }
+
+  function download(filename, content){
+    var blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 500);
+  }
+
+  function bindEvents(){
+    /* Tabs */
+    document.querySelector('.bottom-nav').addEventListener('click', function(e){
+      var a = e.target.closest('.tab'); if(!a) return;
+      e.preventDefault(); showView(a.dataset.view);
+    });
+
+    /* Quick bridges */
+    document.getElementById('btnRevenus').addEventListener('click', function(){ showView('plus'); window.scrollTo({top:0, behavior:'smooth'}); });
+    document.getElementById('btnDepenses').addEventListener('click', function(){ showView('plus'); window.scrollTo({top:0, behavior:'smooth'}); });
+    document.getElementById('btnTryEpargne').addEventListener('click', function(){ showView('epargne'); window.scrollTo({top:0, behavior:'smooth'}); });
+    document.getElementById('backToDash').addEventListener('click', function(){ showView('dashboard'); window.scrollTo({top:0, behavior:'smooth'}); });
+    document.getElementById('goToPlus').addEventListener('click', function(){ showView('plus'); window.scrollTo({top:0, behavior:'smooth'}); });
+
+    /* Menus */
+    var kebab = document.getElementById('kebab'); var sheet = document.getElementById('sheet');
+    kebab.addEventListener('click', function(e){ e.stopPropagation(); sheet.classList.toggle('open'); });
+    document.addEventListener('click', function(e){ if(!sheet.contains(e.target) && e.target!==kebab){ sheet.classList.remove('open'); } });
+
+    var profBtn = document.getElementById('btnProfileMenu'); var profSheet = document.getElementById('profileSheet');
+    profBtn.addEventListener('click', function(e){ e.stopPropagation(); profSheet.classList.toggle('open'); });
+    document.addEventListener('click', function(e){ if(!profSheet.contains(e.target) && e.target!==profBtn){ profSheet.classList.remove('open'); } });
+
+    document.getElementById('btnGuide').addEventListener('click', function(){ document.getElementById('helpModal').style.display='flex'; });
+    document.getElementById('helpClose').addEventListener('click', function(){ document.getElementById('helpModal').style.display='none'; });
+
+    document.getElementById('btnCoachDetails').addEventListener('click', function(){
+      document.getElementById('coachDetails').classList.toggle('hidden');
+    });
+
+    /* Inputs */
+    document.addEventListener('input', function(e){
+      if(e.target.classList.contains('rev-input')){
+        var i=+e.target.dataset.idx, f=e.target.dataset.field;
+        state.revenus[i][f] = f==='amount'? Number(e.target.value||0): e.target.value;
+        setState(state); renderKPIs(); renderCoach();
+        if(state.emprunt.useSync){ renderEmpruntFields(); }
+      }
+      if(e.target.classList.contains('dep-input')){
+        var i=+e.target.dataset.idx, f=e.target.dataset.field;
+        state.depenses[i][f] = f==='amount'? Number(e.target.value||0): e.target.value;
+        setState(state); drawPie(); renderKPIs(); renderCoach();
+      }
+      if(e.target.id==='brutVal' || e.target.id==='chargesPct' || e.target.id==='pasPct'){
+        var brut = Number(document.getElementById('brutVal').value||0);
+        var charges = Number(document.getElementById('chargesPct').value||0)/100;
+        var pas = Number(document.getElementById('pasPct').value||0)/100;
+        var netAvant = Math.max(0, brut * (1 - charges));
+        var netApres = Math.max(0, netAvant * (1 - pas));
+        document.getElementById('netAvant').value = netAvant ? Math.round(netAvant) : '';
+        document.getElementById('netApres').value = netApres ? Math.round(netApres) : '';
+      }
+      if(e.target.id==='empRevenus' || e.target.id==='empCharges' || e.target.id==='empTaux' || e.target.id==='empDuree'){
+        state.emprunt.revenus = Number(document.getElementById('empRevenus').value||0);
+        state.emprunt.charges = Number(document.getElementById('empCharges').value||0);
+        state.emprunt.taux    = Number(document.getElementById('empTaux').value||0);
+        state.emprunt.duree   = Number(document.getElementById('empDuree').value||0);
+        setState(state); calcEmprunt();
+      }
+    });
+
+    document.addEventListener('click', function(e){
+      var del = e.target.closest('.del-cat');
+      if(del){ var i=+del.dataset.del; state.depenses.splice(i,1); setState(state); renderDepenses(); drawPie(); renderCoach(); }
+    });
+
+    document.getElementById('applyNetAvant').addEventListener('click', function(){
+      var net = Number(document.getElementById('netAvant').value||0);
+      if(net>0){
+        var idx = state.revenus.findIndex(function(r){ return (r.label||'').toLowerCase().indexOf('salaire')>-1; });
+        if(idx<0){ state.revenus.unshift({label:'Salaire net', amount:net}); }
+        else { state.revenus[idx].amount = net; }
+        setState(state); renderRevenus(); renderKPIs(); renderCoach(); if(state.emprunt.useSync){ renderEmpruntFields(); } alert('Salaire net (avant PAS) mis à jour');
+      }
+    });
+    document.getElementById('applyNetApres').addEventListener('click', function(){
+      var net = Number(document.getElementById('netApres').value||0);
+      if(net>0){
+        var idx = state.revenus.findIndex(function(r){ return (r.label||'').toLowerCase().indexOf('salaire')>-1; });
+        if(idx<0){ state.revenus.unshift({label:'Salaire net', amount:net}); }
+        else { state.revenus[idx].amount = net; }
+        setState(state); renderRevenus(); renderKPIs(); renderCoach(); if(state.emprunt.useSync){ renderEmpruntFields(); } alert('Salaire net (après PAS) mis à jour');
+      }
+    });
+
+    document.getElementById('syncEmprunt').addEventListener('change', function(){
+      state.emprunt.useSync = !!this.checked; setState(state); renderEmpruntFields();
+    });
+
+    document.getElementById('addRevenu').addEventListener('click', function(){ state.revenus.push({label:'Autre revenu', amount:0}); renderRevenus(); });
+    document.getElementById('addCategorie').addEventListener('click', function(){ state.depenses.push({label:'Nouvelle catégorie', color:'#7dd3fc', amount:0}); renderDepenses(); drawPie(); });
+    document.getElementById('btnSaveAll').addEventListener('click', function(){ setState(state); alert('Sauvegarde OK'); });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.rate'), function(b){
+      b.addEventListener('click', function(){
+        var revenus = totalRevenus(); var reste = computeReste();
+        var rate = b.dataset.rate;
+        if(rate!=='perso'){
+          var val = Math.round( Math.min( (Number(rate)/100)*revenus, 0.30*reste )/10)*10;
+          document.getElementById('epargneMontant').value = val;
+        }
+        updateProjection();
+      });
+    });
+    document.getElementById('epargneMontant').addEventListener('input', updateProjection);
+    document.getElementById('epargneDuree').addEventListener('input', updateProjection);
+    document.getElementById('epargneRend').addEventListener('input', updateProjection);
+    document.getElementById('btnSaveEpargne').addEventListener('click', function(){
+      state.epargne.montant = Number(document.getElementById('epargneMontant').value||0);
+      state.epargne.duree   = Number(document.getElementById('epargneDuree').value||0);
+      state.epargne.rendement = Number(document.getElementById('epargneRend').value||0);
+      setState(state); alert('Objectif épargne enregistré');
+    });
+
+    /* Export / Import */
+    document.getElementById('btnExportCSV').addEventListener('click', function(){
+      var lines = [];
+      lines.push('Type;Libellé;Montant');
+      state.revenus.forEach(function(r){ lines.push('Revenu;'+r.label+';'+r.amount); });
+      state.depenses.forEach(function(d){ lines.push('Dépense;'+d.label+';'+d.amount); });
+      download('equilibrio_'+(state.meta?.name||'profil')+'.csv', '\\uFEFF'+lines.join('\\n'));
+    });
+    document.getElementById('btnExportJSON').addEventListener('click', function(){ download('equilibrio_'+(state.meta?.name||'profil')+'.json', JSON.stringify(state, null, 2)); });
+    document.getElementById('btnImportJSON').addEventListener('click', function(){ document.getElementById('fileImport').click(); });
+    document.getElementById('fileImport').addEventListener('change', function(e){
+      var f = e.target.files[0]; if(!f) return; var rd = new FileReader();
+      rd.onload = function(){ try{ var data = JSON.parse(rd.result); state=data; setState(state); initRender(); alert('Import réussi'); }catch(err){ alert('Fichier invalide'); } };
+      rd.readAsText(f);
+    });
+    document.getElementById('btnPrint').addEventListener('click', function(){ window.print(); });
+    document.getElementById('btnAbout').addEventListener('click', function(){ alert('Equilibrio - v2.0 - Multi-profils + Mini-Coach (offline)'); });
+
+    /* Profiles UI */
+    document.getElementById('profileSelect').addEventListener('change', function(){
+      ALL.currentId = this.value; saveAll(); state = getState(); initRender();
+    });
+    document.getElementById('btnAddProfile').addEventListener('click', function(){
+      var name = prompt('Nom du nouveau profil ?', 'Couple');
+      if(name){ addProfile(name); }
+    });
+    document.getElementById('btnRenameProfile').addEventListener('click', function(){
+      var id = ALL.currentId;
+      var name = prompt('Nouveau nom du profil :', ALL.profiles[id].meta?.name||'Profil');
+      if(name){ renameProfile(id, name); }
+    });
+    document.getElementById('btnDuplicateProfile').addEventListener('click', function(){
+      duplicateProfile(ALL.currentId);
+    });
+    document.getElementById('btnDeleteProfile').addEventListener('click', function(){
+      var id = ALL.currentId, nm = ALL.profiles[id].meta?.name||'Profil';
+      if(confirm('Supprimer le profil “‘+nm+’” ?')){ deleteProfile(id); }
+    });
+  }
+
+  function initRender(){
+    renderProfileSelect();
+    state = getState();
+    renderRevenus(); renderDepenses(); renderKPIs(); drawPie(); renderCoach(); renderEmpruntFields(); updateProjection();
+    showView('dashboard');
+  }
+
+  function safeInit(){
+    try{ bindEvents(); initRender(); console.log('[Equilibrio] v2.0 Init OK'); }
+    catch(err){ console.error(err); alert('Erreur init : '+err.message); }
+  }
+
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', safeInit); }
+  else { safeInit(); }
+
+})();</script>
 </body>
 </html>
